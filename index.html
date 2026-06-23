@@ -2,300 +2,325 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מחולל תזכורות וואטסאפ</title>
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>יוצר תזכורות וואטסאפ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #075E54;
-            --secondary: #128C7E;
-            --bg: #ece5dd;
+            --primary: #25D366;
+            --primary-dark: #128C7E;
+            --bg: #f0f2f5;
             --card-bg: #ffffff;
-            --text: #303030;
+            --text: #333333;
         }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Rubik', -apple-system, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
         body {
-            font-family: Arial, sans-serif;
             background-color: var(--bg);
             color: var(--text);
             margin: 0;
-            padding: 15px;
+            padding: 20px;
             display: flex;
             justify-content: center;
+            align-items: center;
+            min-height: 100vh;
         }
+
         .container {
             width: 100%;
             max-width: 500px;
             background: var(--card-bg);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         }
-        h2 { text-align: center; color: var(--primary); margin-top: 0; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; }
-        input, select, textarea {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-sizing: border-box;
-            font-size: 16px;
+
+        h1 {
+            font-size: 24px;
+            text-align: center;
+            margin-bottom: 25px;
+            color: var(--primary-dark);
         }
-        textarea { resize: vertical; height: 80px; }
-        button {
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+
+        input, textarea, select {
             width: 100%;
             padding: 12px;
-            background-color: var(--secondary);
+            border: 1px solid #ccc;
+            border-radius: 12px;
+            font-size: 16px; /* מונע זום אוטומטי מעצבן באייפון */
+            background: #fafafa;
+            transition: all 0.2s;
+        }
+
+        input:focus, textarea:focus {
+            border-color: var(--primary);
+            background: #fff;
+            outline: none;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 12px;
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
+            transition: background 0.2s;
             margin-top: 10px;
         }
-        button:hover { background-color: var(--primary); }
-        .output-box {
-            margin-top: 20px;
-            background: #f9f9f9;
-            border: 1px dashed var(--primary);
-            padding: 15px;
-            border-radius: 5px;
-            white-space: pre-wrap;
-            font-family: monospace;
-            font-size: 14px;
+
+        button:active {
+            background: var(--primary-dark);
         }
-        .hidden { display: none !important; }
-        #auth-container { text-align: center; margin-top: 50px; }
-        #loading-py { color: #f39c12; font-weight: bold; text-align: center; margin-bottom: 15px; }
+
+        /* מסך נעילה */
+        #lock-screen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+
+        #lock-screen .box {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 350px;
+        }
+
+        .error-msg {
+            color: #d32f2f;
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+        }
     </style>
 </head>
 <body>
 
-<div id="auth-container" class="container">
-    <h2>כניסה למערכת</h2>
-    <div id="loading-py">מנוע פייתון נטען בדפדפן... אנא המתן</div>
-    <div class="form-group">
-        <input type="password" id="password-input" placeholder="הקש סיסמה..." disabled>
-    </div>
-    <button id="auth-btn" onclick="checkPassword()" disabled>כניסה</button>
-</div>
-
-<div id="main-container" class="container hidden">
-    <h2>מחולל תזכורות</h2>
-    
-    <div class="form-group">
-        <label>שם ההרצאה:</label>
-        <input type="text" id="title" placeholder="למשל: סודות היקום">
-    </div>
-    
-    <div class="form-group">
-        <label>סוג ההרצאה:</label>
-        <input type="text" id="type" placeholder="למשל: הרצאת העשרה / זום">
-    </div>
-    
-    <div class="form-group">
-        <label>מרצה:</label>
-        <input type="text" id="lecturer" placeholder="שם המרצה">
-    </div>
-    
-    <div class="form-group">
-        <label>תיאור קצר (ניתן לשלב כוכביות להדגשה):</label>
-        <textarea id="description" placeholder="תיאור קצר של האירוע..."></textarea>
-    </div>
-    
-    <div class="form-group">
-        <label>תאריך לועזי:</label>
-        <input type="date" id="date" onchange="updateHebrewDate()">
-        <small id="hebrew-preview" style="color: var(--secondary); font-weight:bold;"></small>
-    </div>
-    
-    <div class="form-group">
-        <label>שעה:</label>
-        <input type="time" id="time">
-    </div>
-    
-    <div class="form-group">
-        <label>מיקום (אופציונלי):</label>
-        <input type="text" id="location" placeholder="שם המקום">
-    </div>
-    
-    <div class="form-group">
-        <label>מחיר (אופציונלי - השאר ריק אם חינם):</label>
-        <input type="number" id="price" placeholder="מחיר בשקלים">
-    </div>
-    
-    <div class="form-group">
-        <label>קישור להרשמה:</label>
-        <input type="url" id="link" placeholder="https://...">
+    <!-- מסך סיסמה -->
+    <div id="lock-screen">
+        <div class="box">
+            <h2>כניסה למערכת</h2>
+            <div class="form-group">
+                <input type="password" id="password-input" placeholder="הקש סיסמה..." autocomplete="current-password">
+            </div>
+            <button onclick="checkPassword()">התחברות</button>
+            <div class="error-msg" id="error-message">סיסמה שגויה, נסה שוב.</div>
+        </div>
     </div>
 
-    <button onclick="generateText()">צור טקסט לוואטסאפ ✨</button>
+    <!-- האתר הראשי -->
+    <div class="container">
+        <h1>יוצר תזכורות</h1>
+        
+        <div class="form-group">
+            <label>שם ההרצאה</label>
+            <input type="text" id="eventName" placeholder="למשל: סודות היקום">
+        </div>
 
-    <div id="result-section" class="hidden">
-        <h3>הטקסט המוכן:</h3>
-        <div id="output" class="output-box"></div>
-        <button onclick="copyToClipboard()" style="background-color: var(--primary);">העתק טקסט 📋</button>
+        <div class="row">
+            <div class="form-group">
+                <label>סוג ההרצאה</label>
+                <input type="text" id="eventType" placeholder="למשל: הרצאת העשרה">
+            </div>
+            <div class="form-group">
+                <label>מרצה</label>
+                <input type="text" id="speaker" placeholder="שם המרצה">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>תיאור קצר (ניתן להשתמש ב-*להדגשה*)</label>
+            <textarea id="description" rows="3" placeholder="הסבר קצר על האירוע..."></textarea>
+        </div>
+
+        <div class="row">
+            <div class="form-group">
+                <label>תאריך לועזי</label>
+                <input type="date" id="gregorianDate">
+            </div>
+            <div class="form-group">
+                <label>שעה</label>
+                <input type="time" id="eventTime">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>מיקום (אופציונלי)</label>
+            <input type="text" id="location" placeholder="השאר ריק אם אין">
+        </div>
+
+        <div class="form-group">
+            <label>מחיר בש"ח (אופציונלי / השאר ריק לחינם)</label>
+            <input type="number" id="price" placeholder="מחיר במספר">
+        </div>
+
+        <div class="form-group">
+            <label>קישור להרשמה</label>
+            <input type="url" id="regLink" placeholder="https://...">
+        </div>
+
+        <button onclick="generateAndCopy()">העתק נוסח לוואטסאפ</button>
     </div>
-</div>
 
-<script>
-    let pyodideInstance = null;
-    let globalHebrewDate = "";
-    let globalDayOfWeek = "";
+    <script>
+        // המרת סיסמה ל-SHA256
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
 
-    // פונקציה לייצור ה-Hash בדפדפן
-    async function sha256(message) {
-        const msgBuffer = new TextEncoder().encode(message);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    }
+        // --- הגדרת הסיסמה שלך ---
+        // כרגע ה-Hash מייצג את הסיסמה הברירת מחדל: "1234"
+        // בהמשך תחליף את השרשרת הזו בסיסמה המוצפנת שלך
+        const CORRECT_PASSWORD_HASH = "fd573849d78eb68e5bced78f7d88ffabeef179942d2b3f62c5996c43b0e14191";
 
-    // *** שים לב: החלף את המחרוזת למטה ב-Hash של הסיסמה שלך (כרגע מוגדר ל-"1234") ***
-    const HASHED_PASSWORD = "fd573849d78eb68e5bced78f7d88ffabeef179942d2b3f62c5996c43b0e14191"; 
-
-    // אתחול מנוע פייתון ישירות בדפדפן בעת טעינת הדף
-    async function initPython() {
-        try {
-            pyodideInstance = await loadPyodide();
-            // התקנת ספריית pyluach בתוך הדפדפן
-            await pyodideInstance.loadPackage("micropip");
-            const micropip = pyodideInstance.pyimport("micropip");
-            await micropip.install("pyluach");
+        async function checkPassword() {
+            const input = document.getElementById('password-input').value;
+            const hashedInput = await sha256(input);
             
-            // הגדרת פונקציית הפייתון שלך בתוך סביבת הריצה
-            await pyodideInstance.runPythonAsync(`
-from datetime import datetime
-from pyluach import dates
-
-def get_hebrew_date(project_date_str):
-    try:
-        date_obj = datetime.strptime(project_date_str, '%Y-%m-%d')
-        hebrew_date = dates.HebrewDate.from_pydate(date_obj)
-        full_str = hebrew_date.hebrew_date_string()
-        parts = full_str.split()
-        
-        day = parts[0]
-        if len(parts) > 3:
-            month = f"{parts[1]} {parts[2]}"
-        else:
-            month = parts[1]
-            
-        month = month.replace('\\u05c1', '').replace('\\u05c2', '')
-        
-        prefix = "ב"
-        if month.startswith("ו"):
-            prefix = "ב"
-            
-        return f"{day} {prefix}{month}"
-    except Exception as e:
-        return "שגיאה בתאריך"
-            `);
-            
-            // שחרור כפתור הכניסה ברגע שהפייתון מוכן לעבודה
-            document.getElementById('loading-py').style.display = 'none';
-            document.getElementById('password-input').disabled = false;
-            document.getElementById('auth-btn').disabled = false;
-        } catch (err) {
-            document.getElementById('loading-py').innerText = "שגיאה בטעינת מנוע פייתון.";
-            console.error(err);
-        }
-    }
-
-    // הפעלת האתחול
-    initPython();
-
-    async function checkPassword() {
-        const input = document.getElementById('password-input').value;
-        const inputHashed = await sha256(input);
-        
-        if (inputHashed === HASHED_PASSWORD) {
-            document.getElementById('auth-container').classList.add('hidden');
-            document.getElementById('main-container').classList.remove('hidden');
-        } else {
-            alert('סיסמה שגויה!');
-        }
-    }
-
-    function updateHebrewDate() {
-        const dateVal = document.getElementById('date').value;
-        if (!dateVal || !pyodideInstance) return;
-
-        const preview = document.getElementById('hebrew-preview');
-        
-        // יצירת יום בשבוע ב-JS
-        const days = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
-        const d = new Date(dateVal);
-        globalDayOfWeek = days[d.getDay()];
-
-        // קריאה לפונקציית הפייתון שלך שהגדרנו קודם כדי לחשב את התאריך
-        globalHebrewDate = pyodideInstance.runPython(`get_hebrew_date("${dateVal}")`);
-
-        preview.innerText = `יום ${globalDayOfWeek}, ${globalHebrewDate}`;
-    }
-
-    function generateText() {
-        const title = document.getElementById('title').value;
-        const type = document.getElementById('type').value;
-        const lecturer = document.getElementById('lecturer').value;
-        const description = document.getElementById('description').value;
-        const dateVal = document.getElementById('date').value;
-        const time = document.getElementById('time').value;
-        const location = document.getElementById('location').value;
-        const price = document.getElementById('price').value;
-        const link = document.getElementById('link').value;
-
-        if (!title || !dateVal || !time) {
-            alert("אנא מלא את שדות החובה: שם הרצאה, תאריך ושעה.");
-            return;
+            if (hashedInput === CORRECT_PASSWORD_HASH) {
+                document.getElementById('lock-screen').style.display = 'none';
+                // שמירת מצב זמנית ב-Session כדי שלא יבקש סיסמה בכל רענון קצר
+                sessionStorage.setItem('authenticated', 'true');
+            } else {
+                document.getElementById('error-message').style.display = 'block';
+            }
         }
 
-        if (!globalHebrewDate) {
-            updateHebrewDate();
+        // בדיקה אם כבר התחבר בעבר בטאב הזה
+        if (sessionStorage.getItem('authenticated') === 'true') {
+            document.getElementById('lock-screen').style.display = 'none';
         }
 
-        const d = new Date(dateVal);
-        const formattedGregorianDate = `${d.getDate()}.${d.getMonth() + 1}`;
-
-        let locationStr = "";
-        if (location && location.trim() !== "") {
-            locationStr = `${location}`;
-        }
-
-        let priceStr = "ההשתתפות בהרצאה חופשית, בהרשמה מראש.";
-        if (price && price.trim() !== "" && parseInt(price) > 0) {
-            priceStr = `${price}₪`;
-        }
-
-        let message = `*${title} / ${type} עם ${lecturer}*\n\n`;
-        
-        if (description) {
-            message += `${description}\n\n`;
-        }
-
-        message += `פרטי האירוע\n`;
-        message += `* *תאריך:* יום ${globalDayOfWeek}, ${globalHebrewDate || '---'}, ${formattedGregorianDate}\n`;
-        message += `* *שעה:* ${time}\n`;
-        if (location && location.trim() !== "") {
-            message += `* *מיקום:* ${locationStr}\n`;
-        }
-        message += `* *מחיר:* ${priceStr}\n\n`;
-        message += `*להרשמה ופרטים נוספים👇*\n`;
-        message += `${link || ''}`;
-
-        document.getElementById('output').innerText = message;
-        document.getElementById('result-section').classList.remove('hidden');
-    }
-
-    function copyToClipboard() {
-        const text = document.getElementById('output').innerText;
-        navigator.clipboard.writeText(text).then(() => {
-            alert("הטקסט הועתק בהצלחה! 📋");
-        }).catch(err => {
-            alert("שגיאה בהעתקה, אנא העתק ידנית.");
+        // האזנה למקש Enter במסך הסיסמה
+        document.getElementById('password-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') checkPassword();
         });
-    }
-</script>
+
+        // פונקציה להבאת תאריך עברי מ-Hebcal API
+        async function getHebrewDate(dateStr) {
+            if (!dateStr) return "";
+            try {
+                const [year, month, day] = dateStr.split('-');
+                const response = await fetch(`https://www.hebcal.com/converter?cfg=json&gy=${year}&gm=${month}&gd=${day}&g2h=1`);
+                const data = await response.json();
+                
+                // ה-API מחזיר למשל "ז׳ בתמוז תשפ״ו". נוריד את המילה האחרונה (השנה)
+                let hebParts = data.hebrew.split(' ');
+                if (hebParts.length > 1) {
+                    hebParts.pop(); // מסיר את השנה
+                }
+                // החלפת הגרש המיוחד של ה-API בגרש רגיל לבקשתך
+                return hebParts.join(' ').replace(/׳/g, "'");
+            } catch (e) {
+                console.error("שגיאה בהבאת תאריך עברי", e);
+                return "";
+            }
+        }
+
+        async function generateAndCopy() {
+            const eventName = document.getElementById('eventName').value;
+            const eventType = document.getElementById('eventType').value;
+            const speaker = document.getElementById('speaker').value;
+            const description = document.getElementById('description').value;
+            const dateVal = document.getElementById('gregorianDate').value;
+            const timeVal = document.getElementById('eventTime').value;
+            const locationVal = document.getElementById('location').value.trim();
+            const priceVal = document.getElementById('price').value.trim();
+            const regLink = document.getElementById('regLink').value.trim();
+
+            if (!dateVal) {
+                alert("חובה לבחור תאריך");
+                return;
+            }
+
+            // חישוב יום בשבוע ותאריך לועזי בפורמט d.m
+            const dateObj = new Date(dateVal);
+            const daysOfWeek = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
+            const dayOfWeek = daysOfWeek[dateObj.getDay()];
+            
+            const dayOfMonth = dateObj.getDate();
+            const monthOfYear = dateObj.getMonth() + 1;
+            const formattedCurrentDate = `${dayOfMonth}.${monthOfYear}`;
+
+            // הבאת התאריך העברי מהשרת
+            const hebrewDate = await getHebrewDate(dateVal);
+
+            // בניית שורת המיקום באופן מותנה
+            let locationLine = "";
+            if (locationVal) {
+                locationLine = `*מיקום:*  ${locationVal}\n`;
+            }
+
+            // בניית שורת המחיר
+            let priceLine = "";
+            if (!priceVal || priceVal == "0") {
+                priceLine = "*מחיר:* ההשתתפות בהרצאה חופשית, בהרשמה מראש.";
+            } else {
+                priceLine = `*מחיר:* ${priceVal}₪`;
+            }
+
+            // בניית הטקסט הסופי בדיוק לפי הפורמט שביקשת
+            let message = `*${eventName} / ${eventType} עם ${speaker}*\n\n`;
+            if (description) {
+                message += `${description}\n\n`;
+            }
+            message += `*פרטי האירוע:*\n`;
+            message += `*תאריך:* יום ${dayOfWeek}, ${hebrewDate}, ${formattedCurrentDate}\n`;
+            message += `*שעה:* ${timeVal}\n`;
+            if (locationLine) {
+                message += locationLine;
+            }
+            message += `${priceLine}\n\n`;
+            message += `*להרשמה ופרטים נוספים*👇\n`;
+            message += `${regLink}`;
+
+            // העתקה ללוח
+            navigator.clipboard.writeText(message).then(() => {
+                alert("הטקסט הועתק בהצלחה לוואטסאפ!");
+            }).catch(err => {
+                alert("שגיאה בהעתקה, נסה שוב");
+            });
+        }
+
+        // הגדרת תאריך ברירת מחדל להיום כדי לחסוך זמן
+        document.getElementById('gregorianDate').valueAsDate = new Date();
+    </script>
 </body>
 </html>
