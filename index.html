@@ -189,7 +189,6 @@
 </head>
 <body>
 
-    <!-- מסך סיסמה -->
     <div id="lock-screen">
         <div class="box">
             <h2>כניסה למערכת</h2>
@@ -201,11 +200,9 @@
         </div>
     </div>
 
-    <!-- האתר הראשי -->
     <div class="container">
         <h1>יוצר תזכורות</h1>
 
-        <!-- בורר המצבים -->
         <div class="toggle-container">
             <button type="button" id="btn-single" class="toggle-btn active" onclick="setMode('single')">הרצאה בודדת</button>
             <button type="button" id="btn-series" class="toggle-btn" onclick="setMode('series')">סדרת הרצאות</button>
@@ -232,7 +229,6 @@
             <textarea id="description" rows="3" placeholder="הסבר קצר..."></textarea>
         </div>
 
-        <!-- רשימת הרצאות דינמית לסדרה -->
         <div id="series-lectures-group" class="form-group" style="display: none;">
             <label>הרצאות הכלולות בסדרה</label>
             <div id="lectures-container"></div>
@@ -255,13 +251,11 @@
             <input type="text" id="location" placeholder="השאר ריק אם אין">
         </div>
 
-        <!-- שדה מחיר להרצאה בודדת -->
         <div id="single-price-group" class="form-group">
             <label>מחיר בש"ח (אופציונלי / השאר ריק לחינם)</label>
             <input type="number" id="price" placeholder="מחיר במספר">
         </div>
 
-        <!-- שדות מחיר מפוצלים לסדרה -->
         <div id="series-prices-group" class="row" style="display: none; margin-bottom: 18px;">
             <div class="form-group" style="margin-bottom: 0;">
                 <label>מחיר להרצאה בודדת</label>
@@ -373,7 +367,7 @@
             });
         }
 
-        // פונקציה להבאת תאריך עברי מ-Hebcal API (מתוקנת ללא ניקוד)
+        // פונקציה להבאת תאריך עברי מ-Hebcal API (ללא ניקוד)
         async function getHebrewDate(dateStr) {
             if (!dateStr) return "";
             try {
@@ -387,12 +381,8 @@
                 }
                 
                 let hebrewDate = hebParts.join(' ');
-                
-                // הסרת כל סוגי הניקוד והטעמים (תווי יוניקוד בטווח המבוקש)
-                hebrewDate = hebrewDate.replace(/[\u0591-\u05C7]/g, '');
-                
-                // החלפת הגרש המיוחד של ה-API בגרש רגיל
-                return hebrewDate.replace(/׳/g, "'");
+                hebrewDate = hebrewDate.replace(/[\u0591-\u05C7]/g, ''); // הסרת ניקוד וטעמים
+                return hebrewDate.replace(/׳/g, "'"); // החלפת גרש
             } catch (e) {
                 console.error("שגיאה בהבאת תאריך עברי", e);
                 return "";
@@ -430,22 +420,25 @@
             }
 
             if (currentMode === 'single') {
+                // --- אופציה א' החדשה והנקייה להרצאה בודדת ---
                 const priceVal = document.getElementById('price').value.trim();
-                let locationLine = locationVal ? `*מיקום:* ${locationVal}\n` : "";
-                let priceLine = (!priceVal || priceVal == "0") ? "*מחיר:* ההשתתפות בהרצאה חופשית, בהרשמה מראש." : `*מחיר:* ${priceVal}₪`;
+                let locationLine = locationVal ? `• *מיקום:* ${locationVal}\n` : "";
+                let priceLine = (!priceVal || priceVal == "0") ? "• *מחיר:* ההשתתפות בהרצאה חופשית, בהרשמה מראש." : `• *מחיר:* ${priceVal}₪`;
 
-                let message = `*${eventName} / ${eventType} עם ${speakerText}*\n\n`;
+                let message = `*${eventName}*\n*${eventType}* `;
+                message += `*עם ${speakerText}*\n\n`;
                 if (description) message += `${description}\n\n`;
-                message += `*פרטי האירוע:*\n`;
-                message += `*תאריך:* יום ${dayOfWeek}, ${hebrewDate}, ${formattedCurrentDate}\n`;
-                message += `*שעה:* ${timeVal}\n`;
+                message += `📅 *מתי ואיפה?*\n`;
+                message += `• *יום:* יום ${dayOfWeek}, ${hebrewDate}, ${formattedCurrentDate}\n`;
+                message += `• *שעה:* ${timeVal}\n`;
                 if (locationLine) message += locationLine;
                 message += `${priceLine}\n\n`;
-                message += `*להרשמה ופרטים נוספים*👇\n`;
+                message += `*לפרטים נוספים והרשמה👇*\n`;
                 message += `${regLink}`;
 
                 copyToClipboard(message);
             } else {
+                // --- אופציה א' המותאמת לסדרת הרצאות ---
                 const priceLecture = document.getElementById('pricePerLecture').value.trim();
                 const priceSeries = document.getElementById('pricePerSeries').value.trim();
                 
@@ -453,13 +446,14 @@
                 if ((!priceLecture || priceLecture == "0") && (!priceSeries || priceSeries == "0")) {
                     priceContent = "ההשתתפות חופשית, בהרשמה מראש.";
                 } else {
-                    priceContent = `${priceLecture} ש"ח להרצאה בודדת ו-${priceSeries} ש"ח לכל הסדרה`;
+                    priceContent = `${priceLecture} ש"ח להרצאה בודדת / ${priceSeries} ש"ח לכל הסדרה`;
                 }
 
-                let message = `*${eventName} / ${eventType} עם ${speakerText}*\n\n`;
+                let message = `*${eventName}*\n*${eventType}* `;
+                message += `*עם ${speakerText}*\n\n`;
                 if (description) message += `${description}\n\n`;
 
-                message += `*הרצאות הכלולות בסדרה:*\n`;
+                message += `📖 *הרצאות הכלולות בסדרה:*\n`;
                 const lectureInputs = document.querySelectorAll('.lecture-item');
                 lectureInputs.forEach(input => {
                     const val = input.value.trim();
@@ -467,16 +461,16 @@
                 });
                 message += `\n`;
 
-                message += `*פרטי האירוע:*\n`;
-                message += `* *תאריך תחילת האירוע:* יום ${dayOfWeek}, ${hebrewDate}, ${formattedCurrentDate}\n`;
-                message += `* *יום בשבוע:* ההרצאה תתרחש בכל יום ${dayOfWeek}\n`;
-                message += `* *שעה:* ${timeVal}\n`;
-                message += `* *מחיר:* ${priceContent}\n`;
+                message += `📅 *פרטי המפגשים:*\n`;
+                message += `• *תאריך תחילת האירוע:* יום ${dayOfWeek}, ${hebrewDate}, ${formattedCurrentDate}\n`;
+                message += `• *יום בשבוע:* ההרצאה תתרחש בכל יום ${dayOfWeek}\n`;
+                message += `• *שעה:* ${timeVal}\n`;
+                message += `• *מחיר:* ${priceContent}\n`;
                 if (locationVal) {
-                    message += `* *מיקום:* ${locationVal}\n`;
+                    message += `• *מיקום:* ${locationVal}\n`;
                 }
                 message += `\n`;
-                message += `*להרשמה ופרטים נוספים👇*\n`;
+                message += `*לפרטים נוספים והרשמה👇*\n`;
                 message += `${regLink}`;
 
                 copyToClipboard(message);
