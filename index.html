@@ -43,8 +43,37 @@
         h1 {
             font-size: 24px;
             text-align: center;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             color: var(--primary-dark);
+        }
+
+        /* עיצוב כפתור ה-Toggle */
+        .toggle-container {
+            display: flex;
+            background: #e3e5e8;
+            padding: 4px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            background: transparent;
+            color: #555;
+            border: none;
+            padding: 10px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 9px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 0 !important;
+        }
+
+        .toggle-btn.active {
+            background: white;
+            color: var(--primary-dark);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         .form-group {
@@ -98,6 +127,36 @@
             background: var(--primary-dark);
         }
 
+        .btn-secondary {
+            background: #007aff;
+            padding: 10px;
+            font-size: 14px;
+            border-radius: 12px;
+            width: auto;
+            display: inline-block;
+            margin-bottom: 10px;
+            margin-top: 5px;
+        }
+
+        .lecture-input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .lecture-input-row button {
+            width: 45px;
+            height: 45px;
+            margin-top: 0;
+            background: #ff3b30;
+            border-radius: 12px;
+            font-size: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0;
+        }
+
         /* מסך נעילה */
         #lock-screen {
             position: fixed;
@@ -145,35 +204,48 @@
     <!-- האתר הראשי -->
     <div class="container">
         <h1>יוצר תזכורות</h1>
+
+        <!-- בורר המצבים -->
+        <div class="toggle-container">
+            <button type="button" id="btn-single" class="toggle-btn active" onclick="setMode('single')">הרצאה בודדת</button>
+            <button type="button" id="btn-series" class="toggle-btn" onclick="setMode('series')">סדרת הרצאות</button>
+        </div>
         
         <div class="form-group">
-            <label>שם ההרצאה</label>
-            <input type="text" id="eventName" placeholder="למשל: סודות היקום">
+            <label id="lbl-eventName">שם ההרצאה</label>
+            <input type="text" id="eventName" placeholder="הכנס שם...">
         </div>
 
         <div class="row">
             <div class="form-group">
-                <label>סוג ההרצאה</label>
+                <label id="lbl-eventType">סוג ההרצאה</label>
                 <input type="text" id="eventType" placeholder="למשל: הרצאת העשרה">
             </div>
             <div class="form-group">
-                <label>מרצה</label>
+                <label id="lbl-speaker">מרצה</label>
                 <input type="text" id="speaker" placeholder="שם המרצה">
             </div>
         </div>
 
         <div class="form-group">
-            <label>תיאור קצר (ניתן להשתמש ב-*להדגשה*)</label>
-            <textarea id="description" rows="3" placeholder="הסבר קצר על האירוע..."></textarea>
+            <label id="lbl-description">תיאור קצר (ניתן להשתמש ב-*להדגשה*)</label>
+            <textarea id="description" rows="3" placeholder="הסבר קצר..."></textarea>
+        </div>
+
+        <!-- רשימת הרצאות דינמית לסדרה -->
+        <div id="series-lectures-group" class="form-group" style="display: none;">
+            <label>הרצאות הכלולות בסדרה</label>
+            <div id="lectures-container"></div>
+            <button type="button" class="btn-secondary" onclick="addLectureInput()">+ הוסף הרצאה</button>
         </div>
 
         <div class="row">
             <div class="form-group">
-                <label>תאריך לועזי</label>
+                <label id="lbl-gregorianDate">תאריך לועזי</label>
                 <input type="date" id="gregorianDate">
             </div>
             <div class="form-group">
-                <label>שעה</label>
+                <label id="lbl-eventTime">שעה</label>
                 <input type="time" id="eventTime">
             </div>
         </div>
@@ -183,9 +255,22 @@
             <input type="text" id="location" placeholder="השאר ריק אם אין">
         </div>
 
-        <div class="form-group">
+        <!-- שדה מחיר להרצאה בודדת -->
+        <div id="single-price-group" class="form-group">
             <label>מחיר בש"ח (אופציונלי / השאר ריק לחינם)</label>
             <input type="number" id="price" placeholder="מחיר במספר">
+        </div>
+
+        <!-- שדות מחיר מפוצלים לסדרה -->
+        <div id="series-prices-group" class="row" style="display: none; margin-bottom: 18px;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>מחיר להרצאה בודדת</label>
+                <input type="number" id="pricePerLecture" placeholder="מחיר בודד או 0">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>מחיר לסדרה שלמה</label>
+                <input type="number" id="pricePerSeries" placeholder="מחיר סדרה או 0">
+            </div>
         </div>
 
         <div class="form-group">
@@ -197,6 +282,8 @@
     </div>
 
     <script>
+        let currentMode = 'single';
+
         // המרת סיסמה ל-SHA256
         async function sha256(message) {
             const msgBuffer = new TextEncoder().encode(message);
@@ -205,9 +292,7 @@
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
-        // --- הגדרת הסיסמה שלך ---
-        // כרגע ה-Hash מייצג את הסיסמה הברירת מחדל: "1234"
-        // בהמשך תחליף את השרשרת הזו בסיסמה המוצפנת שלך
+        // הגדרת ה-Hash של הסיסמה שלך
         const CORRECT_PASSWORD_HASH = "fd573849d78eb68e5bced78f7d88ffabeef179942d2b3f62c5996c43b0e14191";
 
         async function checkPassword() {
@@ -216,22 +301,81 @@
             
             if (hashedInput === CORRECT_PASSWORD_HASH) {
                 document.getElementById('lock-screen').style.display = 'none';
-                // שמירת מצב זמנית ב-Session כדי שלא יבקש סיסמה בכל רענון קצר
                 sessionStorage.setItem('authenticated', 'true');
             } else {
                 document.getElementById('error-message').style.display = 'block';
             }
         }
 
-        // בדיקה אם כבר התחבר בעבר בטאב הזה
         if (sessionStorage.getItem('authenticated') === 'true') {
             document.getElementById('lock-screen').style.display = 'none';
         }
 
-        // האזנה למקש Enter במסך הסיסמה
         document.getElementById('password-input').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') checkPassword();
         });
+
+        // ניהול מצבי אפליקציה (הרצאה בודדת / סדרה)
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('btn-single').classList.toggle('active', mode === 'single');
+            document.getElementById('btn-series').classList.toggle('active', mode === 'series');
+            
+            // עדכון תוויות וכותרות באופן דינמי
+            document.getElementById('lbl-eventName').innerText = mode === 'single' ? 'שם ההרצאה' : 'שם הסדרה';
+            document.getElementById('lbl-eventType').innerText = mode === 'single' ? 'סוג ההרצאה' : 'סוג הסדרה';
+            document.getElementById('lbl-speaker').innerText = mode === 'single' ? 'מרצה' : 'מרצה(/ים) (הפרד בפסיקים)';
+            document.getElementById('lbl-description').innerText = mode === 'single' ? 'תיאור קצר (ניתן להשתמש ב-*להדגשה*)' : 'תיאור קצר של הסדרה (ניתן להשתמש ב-*להדגשה*)';
+            document.getElementById('lbl-gregorianDate').innerText = mode === 'single' ? 'תאריך לועזי' : 'תאריך תחילת האירוע';
+            
+            // הצגה/הסתרה של אלמנטים לפי המצב הנבחר
+            document.getElementById('single-price-group').style.display = mode === 'single' ? 'block' : 'none';
+            document.getElementById('series-prices-group').style.display = mode === 'series' ? 'grid' : 'none';
+            document.getElementById('series-lectures-group').style.display = mode === 'series' ? 'block' : 'none';
+            
+            // אתחול שדות הרצאה ראשוניים אם הרשימה ריקה
+            if (mode === 'series') {
+                const container = document.getElementById('lectures-container');
+                if (container.children.length === 0) {
+                    addLectureInput();
+                    addLectureInput();
+                }
+            }
+        }
+
+        // פונקציות להוספה וניהול של רשימת ההרצאות הדינמית
+        function addLectureInput(value = '') {
+            const container = document.getElementById('lectures-container');
+            const count = container.children.length + 1;
+            
+            const row = document.createElement('div');
+            row.className = 'lecture-input-row';
+            
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'lecture-item';
+            input.placeholder = `הרצאה מס' ${count}`;
+            input.value = value;
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.innerText = '✕';
+            removeBtn.onclick = function() {
+                row.remove();
+                reindexLectures();
+            };
+            
+            row.appendChild(input);
+            row.appendChild(removeBtn);
+            container.appendChild(row);
+        }
+
+        function reindexLectures() {
+            const inputs = document.querySelectorAll('.lecture-item');
+            inputs.forEach((input, index) => {
+                input.placeholder = `הרצאה מס' ${index + 1}`;
+            });
+        }
 
         // פונקציה להבאת תאריך עברי מ-Hebcal API
         async function getHebrewDate(dateStr) {
@@ -241,12 +385,10 @@
                 const response = await fetch(`https://www.hebcal.com/converter?cfg=json&gy=${year}&gm=${month}&gd=${day}&g2h=1`);
                 const data = await response.json();
                 
-                // ה-API מחזיר למשל "ז׳ בתמוז תשפ״ו". נוריד את המילה האחרונה (השנה)
                 let hebParts = data.hebrew.split(' ');
                 if (hebParts.length > 1) {
                     hebParts.pop(); // מסיר את השנה
                 }
-                // החלפת הגרש המיוחד של ה-API בגרש רגיל לבקשתך
                 return hebParts.join(' ').replace(/׳/g, "'");
             } catch (e) {
                 console.error("שגיאה בהבאת תאריך עברי", e);
@@ -257,12 +399,11 @@
         async function generateAndCopy() {
             const eventName = document.getElementById('eventName').value;
             const eventType = document.getElementById('eventType').value;
-            const speaker = document.getElementById('speaker').value;
+            const speakerVal = document.getElementById('speaker').value;
             const description = document.getElementById('description').value;
             const dateVal = document.getElementById('gregorianDate').value;
             const timeVal = document.getElementById('eventTime').value;
             const locationVal = document.getElementById('location').value.trim();
-            const priceVal = document.getElementById('price').value.trim();
             const regLink = document.getElementById('regLink').value.trim();
 
             if (!dateVal) {
@@ -282,44 +423,79 @@
             // הבאת התאריך העברי מהשרת
             const hebrewDate = await getHebrewDate(dateVal);
 
-            // בניית שורת המיקום באופן מותנה
-            let locationLine = "";
-            if (locationVal) {
-                locationLine = `*מיקום:*  ${locationVal}\n`;
+            // טיפול במבנה השמות של המרצים (החלפת פסיק ב- &)
+            let speakerText = speakerVal;
+            if (currentMode === 'series' && speakerVal.includes(',')) {
+                speakerText = speakerVal.split(',').map(s => s.trim()).filter(s => s).join(' & ');
             }
 
-            // בניית שורת המחיר
-            let priceLine = "";
-            if (!priceVal || priceVal == "0") {
-                priceLine = "*מחיר:* ההשתתפות בהרצאה חופשית, בהרשמה מראש.";
+            if (currentMode === 'single') {
+                // --- נוסח עבור הרצאה בודדת ---
+                const priceVal = document.getElementById('price').value.trim();
+                let locationLine = locationVal ? `*מיקום:*  ${locationVal}\n` : "";
+                let priceLine = (!priceVal || priceVal == "0") ? "*מחיר:* ההשתתפות בהרצאה חופשית, בהרשמה מראש." : `*מחיר:* ${priceVal}₪`;
+
+                let message = `*${eventName} / ${eventType} עם ${speakerText}*\n\n`;
+                if (description) message += `${description}\n\n`;
+                message += `*פרטי האירוע:*\n`;
+                message += `*תאריך:* יום ${dayOfWeek}, ${hebrewDate}, ${formattedCurrentDate}\n`;
+                message += `*שעה:* ${timeVal}\n`;
+                if (locationLine) message += locationLine;
+                message += `${priceLine}\n\n`;
+                message += `*להרשמה ופרטים נוספים*👇\n`;
+                message += `${regLink}`;
+
+                copyToClipboard(message);
             } else {
-                priceLine = `*מחיר:* ${priceVal}₪`;
-            }
+                // --- נוסח עבור סדרת הרצאות ---
+                const priceLecture = document.getElementById('pricePerLecture').value.trim();
+                const priceSeries = document.getElementById('pricePerSeries').value.trim();
+                
+                let priceContent = "";
+                if ((!priceLecture || priceLecture == "0") && (!priceSeries || priceSeries == "0")) {
+                    priceContent = "ההשתתפות חופשית, בהרשמה מראש.";
+                } else {
+                    priceContent = `${priceLecture} ש"ח להרצאה בודדת ו-${priceSeries} ש"ח לכל הסדרה`;
+                }
 
-            // בניית הטקסט הסופי בדיוק לפי הפורמט שביקשת
-            let message = `*${eventName} / ${eventType} עם ${speaker}*\n\n`;
-            if (description) {
-                message += `${description}\n\n`;
-            }
-            message += `*פרטי האירוע:*\n`;
-            message += `*תאריך:* יום ${dayOfWeek}, ${hebrewDate}, ${formattedCurrentDate}\n`;
-            message += `*שעה:* ${timeVal}\n`;
-            if (locationLine) {
-                message += locationLine;
-            }
-            message += `${priceLine}\n\n`;
-            message += `*להרשמה ופרטים נוספים*👇\n`;
-            message += `${regLink}`;
+                let message = `${eventName} / ${eventType} עם ${speakerText}\n\n`;
+                if (description) message += `${description}\n\n`;
 
-            // העתקה ללוח
-            navigator.clipboard.writeText(message).then(() => {
+                // הרצאות הכלולות בסדרה
+                message += `*הרצאות הכלולות בסדרה:*\n`;
+                const lectureInputs = document.querySelectorAll('.lecture-item');
+                lectureInputs.forEach(input => {
+                    const val = input.value.trim();
+                    if (val) message += `- ${val}\n`;
+                });
+                message += `\n`;
+
+                // פרטי האירוע
+                message += `*פרטי האירוע:*\n`;
+                message += `* *תאריך תחילת האירוע:* יום ${dayOfWeek}, ${hebrewDate}, ${formattedCurrentDate}\n`;
+                message += `* *יום בשבוע:* ההרצאה תתרחש בכל יום ${dayOfWeek}\n`;
+                message += `* *שעה:* ${timeVal}\n`;
+                message += `* *מחיר:* ${priceContent}\n`;
+                if (locationVal) {
+                    message += `* *מיקום:* ${locationVal}\n`;
+                }
+                message += `\n`;
+                message += `*להרשמה ופרטים נוספים👇*\n`;
+                message += `${regLink}`;
+
+                copyToClipboard(message);
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
                 alert("הטקסט הועתק בהצלחה לוואטסאפ!");
             }).catch(err => {
                 alert("שגיאה בהעתקה, נסה שוב");
             });
         }
 
-        // הגדרת תאריך ברירת מחדל להיום כדי לחסוך זמן
+        // הגדרת תאריך ברירת מחדל להיום
         document.getElementById('gregorianDate').valueAsDate = new Date();
     </script>
 </body>
