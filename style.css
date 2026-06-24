@@ -1,0 +1,211 @@
+:root {
+    --primary: #25D366;
+    --primary-dark: #128C7E;
+    --bg: #f0f2f5;
+    --card-bg: #ffffff;
+    --text: #333333;
+    --accent: #6c5ce7;
+}
+
+* {
+    box-sizing: border-box;
+    font-family: 'Rubik', -apple-system, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    width: 100%;
+    max-width: 500px;
+    background: var(--card-bg);
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+h1 {
+    font-size: 24px;
+    text-align: center;
+    margin-bottom: 20px;
+    color: var(--primary-dark);
+}
+
+/* אזור הדבקה חכם */
+.ai-parser-box {
+    background: #f8f9fa;
+    border: 2px dashed #cbd5e1;
+    border-radius: 14px;
+    padding: 15px;
+    margin-bottom: 25px;
+}
+
+.ai-parser-box h3 {
+    margin: 0 0 10px 0;
+    font-size: 15px;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-magic {
+    width: 100%;
+    background: var(--accent);
+    color: white;
+    padding: 10px;
+    font-size: 14px;
+    border-radius: 10px;
+    margin-top: 8px;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+}
+
+/* עיצוב כפתור ה-Toggle */
+.toggle-container {
+    display: flex;
+    background: #e3e5e8;
+    padding: 4px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+}
+
+.toggle-btn {
+    flex: 1;
+    background: transparent;
+    color: #555;
+    border: none;
+    padding: 10px;
+    font-size: 15px;
+    font-weight: bold;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 0 !important;
+}
+
+.toggle-btn.active {
+    background: white;
+    color: var(--primary-dark);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.form-group {
+    margin-bottom: 18px;
+}
+
+label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 6px;
+    font-size: 14px;
+}
+
+input, textarea, select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 12px;
+    font-size: 16px;
+    background: #fafafa;
+    transition: all 0.2s;
+}
+
+input:focus, textarea:focus {
+    border-color: var(--primary);
+    background: #fff;
+    outline: none;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+button {
+    width: 100%;
+    padding: 14px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 10px;
+}
+
+button:active {
+    background: var(--primary-dark);
+}
+
+.btn-secondary {
+    background: #007aff;
+    padding: 10px;
+    font-size: 14px;
+    border-radius: 12px;
+    width: auto;
+    display: inline-block;
+    margin-bottom: 10px;
+    margin-top: 5px;
+}
+
+.lecture-input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.lecture-input-row button {
+    width: 45px;
+    height: 45px;
+    margin-top: 0;
+    background: #ff3b30;
+    border-radius: 12px;
+    font-size: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+}
+
+/* מסך נעילה */
+#lock-screen {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--bg);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    padding: 20px;
+}
+
+#lock-screen .box {
+    background: white;
+    padding: 30px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    width: 100%;
+    max-width: 350px;
+}
+
+.error-msg {
+    color: #d32f2f;
+    font-size: 14px;
+    margin-top: 10px;
+    display: none;
+}
