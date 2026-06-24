@@ -292,7 +292,7 @@
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
-        // הגדרת ה-Hash של הסיסמה שלך
+        // הגדרת ה-Hash של הסיסמה שלך (ברירת מחדל "1234")
         const CORRECT_PASSWORD_HASH = "fd573849d78eb68e5bced78f7d88ffabeef179942d2b3f62c5996c43b0e14191";
 
         async function checkPassword() {
@@ -321,19 +321,16 @@
             document.getElementById('btn-single').classList.toggle('active', mode === 'single');
             document.getElementById('btn-series').classList.toggle('active', mode === 'series');
             
-            // עדכון תוויות וכותרות באופן דינמי
             document.getElementById('lbl-eventName').innerText = mode === 'single' ? 'שם ההרצאה' : 'שם הסדרה';
             document.getElementById('lbl-eventType').innerText = mode === 'single' ? 'סוג ההרצאה' : 'סוג הסדרה';
             document.getElementById('lbl-speaker').innerText = mode === 'single' ? 'מרצה' : 'מרצה(/ים) (הפרד בפסיקים)';
             document.getElementById('lbl-description').innerText = mode === 'single' ? 'תיאור קצר (ניתן להשתמש ב-*להדגשה*)' : 'תיאור קצר של הסדרה (ניתן להשתמש ב-*להדגשה*)';
             document.getElementById('lbl-gregorianDate').innerText = mode === 'single' ? 'תאריך לועזי' : 'תאריך תחילת האירוע';
             
-            // הצגה/הסתרה של אלמנטים לפי המצב הנבחר
             document.getElementById('single-price-group').style.display = mode === 'single' ? 'block' : 'none';
             document.getElementById('series-prices-group').style.display = mode === 'series' ? 'grid' : 'none';
             document.getElementById('series-lectures-group').style.display = mode === 'series' ? 'block' : 'none';
             
-            // אתחול שדות הרצאה ראשוניים אם הרשימה ריקה
             if (mode === 'series') {
                 const container = document.getElementById('lectures-container');
                 if (container.children.length === 0) {
@@ -343,7 +340,6 @@
             }
         }
 
-        // פונקציות להוספה וניהול של רשימת ההרצאות הדינמית
         function addLectureInput(value = '') {
             const container = document.getElementById('lectures-container');
             const count = container.children.length + 1;
@@ -377,7 +373,7 @@
             });
         }
 
-        // פונקציה להבאת תאריך עברי מ-Hebcal API
+        // פונקציה להבאת תאריך עברי מ-Hebcal API (מתוקנת ללא ניקוד)
         async function getHebrewDate(dateStr) {
             if (!dateStr) return "";
             try {
@@ -389,7 +385,14 @@
                 if (hebParts.length > 1) {
                     hebParts.pop(); // מסיר את השנה
                 }
-                return hebParts.join(' ').replace(/׳/g, "'");
+                
+                let hebrewDate = hebParts.join(' ');
+                
+                // הסרת כל סוגי הניקוד והטעמים (תווי יוניקוד בטווח המבוקש)
+                hebrewDate = hebrewDate.replace(/[\u0591-\u05C7]/g, '');
+                
+                // החלפת הגרש המיוחד של ה-API בגרש רגיל
+                return hebrewDate.replace(/׳/g, "'");
             } catch (e) {
                 console.error("שגיאה בהבאת תאריך עברי", e);
                 return "";
@@ -411,7 +414,6 @@
                 return;
             }
 
-            // חישוב יום בשבוע ותאריך לועזי בפורמט d.m
             const dateObj = new Date(dateVal);
             const daysOfWeek = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
             const dayOfWeek = daysOfWeek[dateObj.getDay()];
@@ -420,19 +422,16 @@
             const monthOfYear = dateObj.getMonth() + 1;
             const formattedCurrentDate = `${dayOfMonth}.${monthOfYear}`;
 
-            // הבאת התאריך העברי מהשרת
             const hebrewDate = await getHebrewDate(dateVal);
 
-            // טיפול במבנה השמות של המרצים (החלפת פסיק ב- &)
             let speakerText = speakerVal;
             if (currentMode === 'series' && speakerVal.includes(',')) {
                 speakerText = speakerVal.split(',').map(s => s.trim()).filter(s => s).join(' & ');
             }
 
             if (currentMode === 'single') {
-                // --- נוסח עבור הרצאה בודדת ---
                 const priceVal = document.getElementById('price').value.trim();
-                let locationLine = locationVal ? `*מיקום:*  ${locationVal}\n` : "";
+                let locationLine = locationVal ? `*מיקום:* ${locationVal}\n` : "";
                 let priceLine = (!priceVal || priceVal == "0") ? "*מחיר:* ההשתתפות בהרצאה חופשית, בהרשמה מראש." : `*מחיר:* ${priceVal}₪`;
 
                 let message = `*${eventName} / ${eventType} עם ${speakerText}*\n\n`;
@@ -447,7 +446,6 @@
 
                 copyToClipboard(message);
             } else {
-                // --- נוסח עבור סדרת הרצאות ---
                 const priceLecture = document.getElementById('pricePerLecture').value.trim();
                 const priceSeries = document.getElementById('pricePerSeries').value.trim();
                 
@@ -461,7 +459,6 @@
                 let message = `*${eventName} / ${eventType} עם ${speakerText}*\n\n`;
                 if (description) message += `${description}\n\n`;
 
-                // הרצאות הכלולות בסדרה
                 message += `*הרצאות הכלולות בסדרה:*\n`;
                 const lectureInputs = document.querySelectorAll('.lecture-item');
                 lectureInputs.forEach(input => {
@@ -470,7 +467,6 @@
                 });
                 message += `\n`;
 
-                // פרטי האירוע
                 message += `*פרטי האירוע:*\n`;
                 message += `* *תאריך תחילת האירוע:* יום ${dayOfWeek}, ${hebrewDate}, ${formattedCurrentDate}\n`;
                 message += `* *יום בשבוע:* ההרצאה תתרחש בכל יום ${dayOfWeek}\n`;
@@ -495,7 +491,6 @@
             });
         }
 
-        // הגדרת תאריך ברירת מחדל להיום
         document.getElementById('gregorianDate').valueAsDate = new Date();
     </script>
 </body>
