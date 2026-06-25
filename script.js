@@ -301,8 +301,8 @@ async function buildMessage() {
         hebrewDate = await getHebrewDate(dateVal);
     }
 
-    // טיפול חכם בכותרת המודגשת: אם אין מרצה, אין "עם", והכוכבית נסגרת נכון
-    let boldHeader = `*${eventName} | ${eventType}`;
+    // כותרת מעוצבת כציטוט (עם > בתחילה) ושומרת על ההדגשה
+    let boldHeader = `> *${eventName} | ${eventType}`;
     if (speakerVal) {
         let speakerText = currentMode === 'series' && speakerVal.includes(',') 
             ? speakerVal.split(',').map(s => s.trim()).filter(s => s).join(' & ') 
@@ -361,6 +361,8 @@ async function updateLivePreview() {
     const previewContent = await buildMessage();
     let htmlPreview = previewContent
         .replace(/\*(.*?)\*/g, "<strong>$1</strong>")
+        // הפיכת ה-> לעיצוב ויזואלי של פס אפור ימני כמו ב-IMG_3379.jpg
+        .replace(/^>\s*(.*)$/gm, "<div style='border-right: 3.5px solid #8696a0; padding-right: 10px; margin: 6px 0; color: #e9edef; font-style: normal;'>$1</div>")
         .replace(/\n/g, "<br>");
     document.getElementById('live-preview-content').innerHTML = htmlPreview;
 }
