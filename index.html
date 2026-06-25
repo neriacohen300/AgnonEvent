@@ -9,6 +9,7 @@
 </head>
 <body>
 
+    <!-- מסך סיסמה -->
     <div id="lock-screen">
         <div class="box">
             <h2>כניסה למערכת</h2>
@@ -20,15 +21,18 @@
         </div>
     </div>
 
+    <!-- האתר הראשי -->
     <div class="container">
         <h1>יוצר תזכורות</h1>
 
+        <!-- תיבת קסם לחילוץ אוטומטי מהמייל -->
         <div class="ai-parser-box">
             <h3>🪄 מילוי אוטומטי מהמייל</h3>
-            <textarea id="rawMailInput" rows="4" placeholder="הדבק כאן את הטקסט מהמייל (שורה 1: שם, שורה 2: סוג ומרצה, שורה 3: זמן ומיקום...)"></textarea>
+            <textarea id="rawMailInput" rows="4" placeholder="הדבק כאן את הטקסט מהמייל..."></textarea>
             <button type="button" class="btn-magic" onclick="parseMailContent()">חלץ פרטים ומלא טופס ✨</button>
         </div>
 
+        <!-- בורר המצבים -->
         <div class="toggle-container">
             <button type="button" id="btn-single" class="toggle-btn active" onclick="setMode('single')">הרצאה בודדת</button>
             <button type="button" id="btn-series" class="toggle-btn" onclick="setMode('series')">סדרת הרצאות</button>
@@ -36,25 +40,34 @@
         
         <div class="form-group">
             <label id="lbl-eventName">שם ההרצאה</label>
-            <input type="text" id="eventName" placeholder="הכנס שם...">
+            <input type="text" id="eventName" placeholder="הכנס שם..." oninput="updateLivePreview()">
         </div>
 
         <div class="row">
             <div class="form-group">
                 <label id="lbl-eventType">סוג ההרצאה</label>
-                <input type="text" id="eventType" placeholder="למשל: הרצאת העשרה">
+                <input type="text" id="eventType" placeholder="למשל: הרצאת העשרה" oninput="updateLivePreview()">
+                <!-- כפתורי קיצור לסוגי אירועים -->
+                <div class="quick-tags">
+                    <span class="tag" onclick="quickFill('eventType', 'סדרת הרצאות מקוונות')">סדרת מקוונות</span>
+                    <span class="tag" onclick="quickFill('eventType', 'סדרת הרצאות מקוונות חדשה')">מקוונות חדשה</span>
+                    <span class="tag" onclick="quickFill('eventType', 'דרשה ספרותית שבועית')">דרשה שבועית</span>
+                    <span class="tag" onclick="quickFill('eventType', 'מועדון הקריאה של בית עגנון')">מועדון קריאה</span>
+                    <span class="tag" onclick="quickFill('eventType', 'הרצאה מקוונת')">הרצאה מקוונת</span>
+                </div>
             </div>
             <div class="form-group">
                 <label id="lbl-speaker">מרצה</label>
-                <input type="text" id="speaker" placeholder="שם המרצה (השאר ריק אם אין)">
+                <input type="text" id="speaker" placeholder="שם המרצה" oninput="updateLivePreview()">
             </div>
         </div>
 
         <div class="form-group">
             <label id="lbl-description">תיאור קצר (ניתן להשתמש ב-*להדגשה*)</label>
-            <textarea id="description" rows="3" placeholder="הסבר קצר..."></textarea>
+            <textarea id="description" rows="3" placeholder="הסבר קצר..." oninput="updateLivePreview()"></textarea>
         </div>
 
+        <!-- רשימת הרצאות דינמית לסדרה -->
         <div id="series-lectures-group" class="form-group" style="display: none;">
             <label>הרצאות הכלולות בסדרה</label>
             <div id="lectures-container"></div>
@@ -64,41 +77,64 @@
         <div class="row">
             <div class="form-group">
                 <label id="lbl-gregorianDate">תאריך לועזי</label>
-                <input type="date" id="gregorianDate">
+                <input type="date" id="gregorianDate" onchange="updateLivePreview()">
             </div>
             <div class="form-group">
                 <label id="lbl-eventTime">שעה</label>
-                <input type="time" id="eventTime">
+                <input type="time" id="eventTime" oninput="updateLivePreview()">
             </div>
         </div>
 
         <div class="form-group">
             <label>מיקום (אופציונלי)</label>
-            <input type="text" id="location" placeholder="השאר ריק אם זה בזום">
+            <input type="text" id="location" placeholder="השאר ריק אם זה בזום" oninput="updateLivePreview()">
+            <!-- כפתורי קיצור למיקומים קבועים -->
+            <div class="quick-tags">
+                <span class="tag" onclick="quickFill('location', 'בית עגנון, קלוזנר 16, ירושלים')">בית עגנון</span>
+                <span class="tag" onclick="quickFill('location', 'בית הכנסת ידידיה, ירושלים')">ביכנ\"ס ידידיה</span>
+                <span class="tag" onclick="quickFill('location', '')">בזום / מקוון (נקה)</span>
+            </div>
         </div>
 
+        <!-- שדה מחיר להרצאה בודדת -->
         <div id="single-price-group" class="form-group">
             <label>מחיר בש"ח (אופציונלי / השאר ריק לחינם)</label>
-            <input type="number" id="price" placeholder="מחיר במספר">
+            <input type="number" id="price" placeholder="מחיר במספר" oninput="updateLivePreview()">
         </div>
 
+        <!-- שדות מחיר מפוצלים לסדרה -->
         <div id="series-prices-group" class="row" style="display: none; margin-bottom: 18px;">
             <div class="form-group" style="margin-bottom: 0;">
                 <label>מחיר להרצאה בודדת</label>
-                <input type="number" id="pricePerLecture" placeholder="מחיר בודד או 0">
+                <input type="number" id="pricePerLecture" placeholder="מחיר בודד" oninput="updateLivePreview()">
             </div>
             <div class="form-group" style="margin-bottom: 0;">
                 <label>מחיר לסדרה שלמה</label>
-                <input type="number" id="pricePerSeries" placeholder="מחיר סדרה או 0">
+                <input type="number" id="pricePerSeries" placeholder="מחיר סדרה" oninput="updateLivePreview()">
             </div>
         </div>
 
         <div class="form-group">
             <label>קישור להרשמה</label>
-            <input type="url" id="regLink" placeholder="https://...">
+            <input type="url" id="regLink" placeholder="https://..." oninput="updateLivePreview()">
         </div>
 
-        <button onclick="generateAndCopy()">העתק נוסח לוואטסאפ</button>
+        <!-- תצוגה מקדימה חיה (Live Preview) -->
+        <div class="preview-box">
+            <h4>📱 תצוגה מקדימה חיה (וואטסאפ)</h4>
+            <div id="live-preview-content"></div>
+        </div>
+
+        <div class="action-buttons">
+            <button onclick="generateAndCopy()">📋 העתק נוסח לוואטסאפ</button>
+            <button class="btn-whatsapp-direct" onclick="openWhatsAppDirect()">🚀 פתח ושלח ישירות</button>
+        </div>
+
+        <!-- היסטוריית תזכורות שהוכנו -->
+        <div class="history-box" id="history-section" style="display: none;">
+            <h4>📜 תזכורות אחרונות שיצרת</h4>
+            <div id="history-list"></div>
+        </div>
     </div>
 
     <script src="script.js"></script>
