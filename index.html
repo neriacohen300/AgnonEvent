@@ -134,11 +134,12 @@
             <button onclick="generateAndCopy()">📋 העתק נוסח לוואטסאפ</button>
             <button class="btn-whatsapp-direct" onclick="openWhatsAppDirect()">🚀 פתח ושלח ישירות</button>
             <button class="btn-clear" onclick="clearAllFields()">🗑️ נקה הכל</button>
+            <button id="btn-save-lecture" style="background: var(--accent);" onclick="saveCurrentLectureToList()">💾 שמור הרצאה למאגר</button>
         </div>
 
         <!-- היסטוריית תזכורות שהוכנו -->
         <div class="history-box" id="history-section" style="display: none;">
-            <h4>📜 תזכורות אחרונות שיצרת</h4>
+            <h4>📂 מאגר הרצאות שמורות</h4>
             <div id="history-list"></div>
         </div>
     </div>

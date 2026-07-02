@@ -1,6 +1,7 @@
 let currentMode = 'single';
 let currentLang = 'he'; // שפת ברירת מחדל
 let cachedHebrewDates = {}; 
+let currentEditingId = null;
 
 // המרת סיסמה ל-SHA256
 async function sha256(message) {
@@ -20,7 +21,7 @@ async function checkPassword() {
         document.getElementById('lock-screen').style.display = 'none';
         sessionStorage.setItem('authenticated', 'true');
         loadDraft(); 
-        updateHistoryList();
+        updateSavedLecturesList();
     } else {
         document.getElementById('error-message').style.display = 'block';
     }
@@ -30,7 +31,7 @@ if (sessionStorage.getItem('authenticated') === 'true') {
     document.getElementById('lock-screen').style.display = 'none';
     window.addEventListener('DOMContentLoaded', () => {
         loadDraft();
-        updateHistoryList();
+        updateSavedLecturesList();
     });
 }
 
@@ -44,8 +45,11 @@ function setLanguage(lang) {
     document.getElementById('btn-lang-he').classList.toggle('active', lang === 'he');
     document.getElementById('btn-lang-en').classList.toggle('active', lang === 'en');
     
-    // שינוי כיוון תיבת הטקסט של המייל בהתאם לשפה שנבחרה
-    document.getElementById('rawMailInput').style.direction = lang === 'en' ? 'ltr' : 'rtl';
+    // הפיכת הכיווניות של כל ממשק המשתמש
+    document.documentElement.dir = lang === 'en' ? 'ltr' : 'rtl';
+    
+    // אם תרצה לתרגם את תוויות הממשק עצמן, תוכל לקרוא כאן לפונקציית תרגום (ראה סעיף 3 למטה)
+    // updateUILabels();
     
     saveDraft();
     updateLivePreview();
@@ -292,9 +296,22 @@ async function buildMessage() {
     let dayOfWeek = currentLang === 'he' ? "[יום]" : "[Day]";
     let formattedDate = currentLang === 'he' ? "[תאריך]" : "[Date]";
     let hebrewDate = "";
+    let isTomorrow = false; // משתנה חדש שנוסיף
 
     if (dateVal) {
         const dateObj = new Date(dateVal);
+        
+        // חישוב התאריך של מחר
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        
+        // בדיקה אם תאריך ההרצאה שווה לתאריך של מחר
+        if (dateObj.getFullYear() === tomorrow.getFullYear() &&
+            dateObj.getMonth() === tomorrow.getMonth() &&
+            dateObj.getDate() === tomorrow.getDate()) {
+            isTomorrow = true;
+        }
         if (currentLang === 'he') {
             const days = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
             dayOfWeek = days[dateObj.getDay()];
@@ -316,7 +333,16 @@ async function buildMessage() {
     }
     boldHeader += `*`;
 
-    let message = `${boldHeader}\n\n`;
+    let message = `${boldHeader}\n`;
+    
+    // --- התוספת החדשה: אם ההרצאה מחר, מוסיפים התראה ---
+    if (isTomorrow) {
+        message += currentLang === 'he' 
+            ? `*מחר!!!*\n\n`
+            : `*Tomorrow!!!*\n\n`;
+    }
+    // --------------------------------------------------
+
     if (description) message += `${description}\n\n`;
 
     if (currentLang === 'he') {
@@ -327,7 +353,7 @@ async function buildMessage() {
             let priceLine = (!priceVal || priceVal == "0") ? "• *עלות:* ההשתתפות בהרצאה חופשית, בהרשמה מראש." : `• *עלות:* ${priceVal}₪`;
 
             message += `📅 *מתי ואיפה?*\n`;
-            message += `• *יום:* תאריך ${dayOfWeek}${hebrewDate ? ', ' + hebrewDate : ''}, ${formattedDate}\n`;
+            message += `• *תאריך:* יום ${dayOfWeek}${hebrewDate ? ', ' + hebrewDate : ''}, ${formattedDate}\n`;
             message += `• *שעה:* ${timeVal}\n`;
             if (locationLine) message += locationLine;
             message += `${priceLine}\n\n`;
@@ -350,10 +376,10 @@ async function buildMessage() {
             message += `\n`;
 
             message += `📅 *פרטי המפגשים:*\n`;
-            message += `• *תאריך תחילת האירוע:* יום ${dayOfWeek}${hebrewDate ? ', ' + hebrewDate : ''}, ${formattedDate}\n`;
+            message += `• *תאריך תחילת האירוע:* ${dayOfWeek}${hebrewDate ? ', ' + hebrewDate : ''}, ${formattedDate}\n`;
             message += `• *יום בשבוע:* ההרצאה תתרחש בכל יום ${dayOfWeek}\n`;
             message += `• *שעה:* ${timeVal}\n`;
-            message += `• *מחיר:* ${priceContent}\n`;
+            message += `• *עלות:* ${priceContent}\n`;
             if (locationVal) message += `• *מיקום:* ${locationVal}\n`;
             message += `\n`;
         }
@@ -431,14 +457,12 @@ async function updateLivePreview() {
 async function generateAndCopy() {
     const msg = await buildMessage();
     navigator.clipboard.writeText(msg).then(() => {
-        saveToHistory(msg);
         alert("הטקסט הועתק בהצלחה לוואטסאפ!");
     }).catch(() => { alert("שגיאה בהעתקה"); });
 }
 
 function openWhatsAppDirect() {
     buildMessage().then(msg => {
-        saveToHistory(msg);
         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
     });
 }
@@ -491,34 +515,7 @@ function loadDraft() {
     if (draft.currentLang) setLanguage(draft.currentLang);
 }
 
-function saveToHistory(messageText) {
-    let history = JSON.parse(localStorage.getItem('whatsapp_history') || "[]");
-    const title = document.getElementById('eventName').value || "אירוע ללא שם";
-    const timeStamp = new Date().toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit'});
-    history.unshift({ title: `${title} (${timeStamp})`, text: messageText });
-    if (history.length > 5) history.pop();
-    localStorage.setItem('whatsapp_history', JSON.stringify(history));
-    updateHistoryList();
-}
 
-function updateHistoryList() {
-    const history = JSON.parse(localStorage.getItem('whatsapp_history') || "[]");
-    const container = document.getElementById('history-list');
-    const section = document.getElementById('history-section');
-    if (history.length === 0) { section.style.display = 'none'; return; }
-    section.style.display = 'block';
-    container.innerHTML = "";
-    history.forEach((item) => {
-        const div = document.createElement('div');
-        div.className = 'history-item';
-        div.innerHTML = `<span>${item.title}</span> <strong>📋 לחץ להעתקה חוזרת</strong>`;
-        div.onclick = () => {
-            navigator.clipboard.writeText(item.text);
-            alert(`הודעת "${item.title}" הועתקה שוב בהצלחה!`);
-        };
-        container.appendChild(div);
-    });
-}
 
 
 // פונקציה לניקוי כל השדות והטיוטה
@@ -564,6 +561,172 @@ function clearAllFields() {
 
     // עדכון מיידי של התצוגה המקדימה החיה
     updateLivePreview();
+
+    currentEditingId = null;
+    updateSaveButtonText();
+    updateSavedLecturesList();
+}
+
+// שמירה או עדכון של ההרצאה הנוכחית במאגר
+function saveCurrentLectureToList() {
+    const eventName = document.getElementById('eventName').value.trim() || "הרצאה ללא שם";
+    const lectureItems = [];
+    document.querySelectorAll('.lecture-item').forEach(i => lectureItems.push(i.value));
+    
+    let savedLectures = JSON.parse(localStorage.getItem('whatsapp_saved_lectures') || "[]");
+    
+    const lectureData = {
+        id: currentEditingId || Date.now().toString(), // אם אנחנו בעריכה שומרים על ה-ID, אם חדש מייצרים אחד
+        title: eventName,
+        updatedAt: new Date().toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit'}) + ' ' + new Date().toLocaleDateString('he-IL'),
+        currentMode, 
+        currentLang,
+        eventName: document.getElementById('eventName').value,
+        eventType: document.getElementById('eventType').value,
+        speaker: document.getElementById('speaker').value,
+        description: document.getElementById('description').value,
+        gregorianDate: document.getElementById('gregorianDate').value,
+        eventTime: document.getElementById('eventTime').value,
+        location: document.getElementById('location').value,
+        price: document.getElementById('price').value,
+        pricePerLecture: document.getElementById('pricePerLecture').value,
+        pricePerSeries: document.getElementById('pricePerSeries').value,
+        regLink: document.getElementById('regLink').value,
+        lectureItems
+    };
+
+    if (currentEditingId) {
+        // עדכון הרצאה קיימת במאגר
+        const index = savedLectures.findIndex(l => l.id === currentEditingId);
+        if (index !== -1) {
+            savedLectures[index] = lectureData;
+            alert("ההרצאה עודכנה בהצלחה במאגר!");
+        } else {
+            savedLectures.unshift(lectureData);
+            alert("ההרצאה נשמרה כחדשה!");
+        }
+    } else {
+        // שמירת הרצאה חדשה לגמרי
+        savedLectures.unshift(lectureData);
+        currentEditingId = lectureData.id; // מעכשיו הטופס נמצא במצב עריכה שלה
+        alert("ההרצאה נשמרה בהצלחה במאגר!");
+    }
+
+    localStorage.setItem('whatsapp_saved_lectures', JSON.stringify(savedLectures));
+    updateSavedLecturesList();
+    updateSaveButtonText();
+}
+
+
+
+// טעינת הרצאה מהמאגר חזרה אל שדות הטופס
+function loadLectureFromList(id) {
+    const savedLectures = JSON.parse(localStorage.getItem('whatsapp_saved_lectures') || "[]");
+    const lecture = savedLectures.find(l => l.id === id);
+    if (!lecture) return;
+
+    currentEditingId = lecture.id;
+
+    // מילוי השדות
+    document.getElementById('eventName').value = lecture.eventName || "";
+    document.getElementById('eventType').value = lecture.eventType || "";
+    document.getElementById('speaker').value = lecture.speaker || "";
+    document.getElementById('description').value = lecture.description || "";
+    document.getElementById('gregorianDate').value = lecture.gregorianDate || "";
+    document.getElementById('eventTime').value = lecture.eventTime || "";
+    document.getElementById('location').value = lecture.location || "";
+    document.getElementById('price').value = lecture.price || "";
+    document.getElementById('pricePerLecture').value = lecture.pricePerLecture || "";
+    document.getElementById('pricePerSeries').value = lecture.pricePerSeries || "";
+    document.getElementById('regLink').value = lecture.regLink || "";
+
+    // טעינת רשימת הרצאות דינמית לסדרה במידה וקיימת
+    if (lecture.lectureItems && lecture.lectureItems.length > 0) {
+        const container = document.getElementById('lectures-container');
+        container.innerHTML = "";
+        lecture.lectureItems.forEach(val => addLectureInput(val));
+    }
+    
+    if (lecture.currentMode) setMode(lecture.currentMode);
+    if (lecture.currentLang) setLanguage(lecture.currentLang);
+
+    saveDraft();
+    updateLivePreview();
+    updateSaveButtonText();
+    updateSavedLecturesList(); // רינדור מחדש כדי להציג סימון ויזואלי לפריט האקטיבי
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // גלילה חלקה לראש העמוד לתחילת עבודה
+}
+
+// מחיקת הרצאה מהמאגר
+function deleteLectureFromList(id, event) {
+    if (event) event.stopPropagation(); // מניעת הפעלת אירוע הלחיצה על השורה כולה (טעינה)
+    if (!confirm("האם אתה בטוח שברצונך למחוק הרצאה זו מהמאגר?")) return;
+
+    let savedLectures = JSON.parse(localStorage.getItem('whatsapp_saved_lectures') || "[]");
+    savedLectures = savedLectures.filter(l => l.id !== id);
+    localStorage.setItem('whatsapp_saved_lectures', JSON.stringify(savedLectures));
+
+    if (currentEditingId === id) {
+        currentEditingId = null;
+        updateSaveButtonText();
+    }
+
+    updateSavedLecturesList();
+}
+
+
+// הצגת רשימת ההרצאות השמורות בממשק
+function updateSavedLecturesList() {
+    const savedLectures = JSON.parse(localStorage.getItem('whatsapp_saved_lectures') || "[]");
+    const container = document.getElementById('history-list');
+    const section = document.getElementById('history-section');
+    
+    if (savedLectures.length === 0) { 
+        section.style.display = 'none'; 
+        return; 
+    }
+    
+    section.style.display = 'block';
+    container.innerHTML = "";
+    
+    savedLectures.forEach((item) => {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        
+        // סימון בולט להרצאה שכרגע טעונה ונערכת בטופס
+        if (currentEditingId === item.id) {
+            div.style.border = "2px solid #007aff";
+            div.style.background = "#eef7ff";
+        }
+        
+        div.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-weight: bold; color: #1e293b;">${item.title}</span>
+                <span style="font-size: 11px; color: #64748b;">עודכן: ${item.updatedAt}</span>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <strong style="color: #007aff; font-size: 12px;">✏️ ערוך</strong>
+                <button type="button" onclick="deleteLectureFromList('${item.id}', event)" 
+                    style="width: 28px !important; height: 28px !important; padding: 0 !important; margin: 0 !important; background: #ff3b30 !important; border-radius: 6px !important; display: flex !important; justify-content: center !important; align-items: center !important; font-size: 12px !important; min-width: 28px !important;">✕</button>
+            </div>
+        `;
+        div.onclick = () => loadLectureFromList(item.id);
+        container.appendChild(div);
+    });
+}
+
+
+function updateSaveButtonText() {
+    const btn = document.getElementById('btn-save-lecture');
+    if (!btn) return;
+    if (currentEditingId) {
+        btn.innerHTML = "💾 עדכן הרצאה שמורה";
+        btn.style.background = "#007aff"; // שינוי צבע לכחול המאותת על מצב עריכה/עדכון
+    } else {
+        btn.innerHTML = "💾 שמור הרצאה למאגר";
+        btn.style.background = "var(--accent)";
+    }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
