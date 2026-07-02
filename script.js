@@ -1,5 +1,6 @@
 let currentMode = 'single';
-let cachedHebrewDates = {}; // מטמון מקומי לחסכון בפניות ל-API בתצוגה המקדימה החיה
+let currentLang = 'he'; // שפת ברירת מחדל
+let cachedHebrewDates = {}; 
 
 // המרת סיסמה ל-SHA256
 async function sha256(message) {
@@ -18,7 +19,7 @@ async function checkPassword() {
     if (hashedInput === CORRECT_PASSWORD_HASH) {
         document.getElementById('lock-screen').style.display = 'none';
         sessionStorage.setItem('authenticated', 'true');
-        loadDraft(); // טעינת טיוטה אחרונה אם קיימת
+        loadDraft(); 
         updateHistoryList();
     } else {
         document.getElementById('error-message').style.display = 'block';
@@ -36,6 +37,19 @@ if (sessionStorage.getItem('authenticated') === 'true') {
 document.getElementById('password-input').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') checkPassword();
 });
+
+// ניהול שפות
+function setLanguage(lang) {
+    currentLang = lang;
+    document.getElementById('btn-lang-he').classList.toggle('active', lang === 'he');
+    document.getElementById('btn-lang-en').classList.toggle('active', lang === 'en');
+    
+    // שינוי כיוון תיבת הטקסט של המייל בהתאם לשפה שנבחרה
+    document.getElementById('rawMailInput').style.direction = lang === 'en' ? 'ltr' : 'rtl';
+    
+    saveDraft();
+    updateLivePreview();
+}
 
 // ניהול מצבים
 function setMode(mode) {
@@ -64,7 +78,6 @@ function setMode(mode) {
     updateLivePreview();
 }
 
-// כפתורי בחירה מהירה
 function quickFill(fieldId, value) {
     document.getElementById(fieldId).value = value;
     saveDraft();
@@ -107,7 +120,7 @@ function reindexLectures() {
     });
 }
 
-// פונקציית חילוץ מותאמת אישית וחכמה (ללא נגיעה בשדה הקישור)
+// פונקציית חילוץ מותאמת אישית וחכמה (תומכת בעברית ואנגלית)
 function parseMailContent() {
     const rawText = document.getElementById('rawMailInput').value.trim();
     if (!rawText) {
@@ -117,52 +130,87 @@ function parseMailContent() {
 
     const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     if (lines.length < 3) {
-        alert("הטקסט קצר מדי. המבנה דורש לפחות 3 שורות (שם, סוג, ופרטי זמן).");
+        alert("הטקסט קצר מדי.");
         return;
     }
 
-    // שורה 1: שם
-    document.getElementById('eventName').value = lines[0];
+    // זיהוי שפה אוטומטי זמני לפי תכולת הטקסט בשורה הראשונה
+    const isEnglishText = /[a-zA-Z]/.test(lines[0]);
+    if (isEnglishText) {
+        setLanguage('en');
+    } else {
+        setLanguage('he');
+    }
 
-    // זיהוי סדרה
-    let isSeries = rawText.includes("סדרת הרצאות") || rawText.includes("סדרת מפגשים") || rawText.includes("סדרה חדשה") || rawText.includes("מועדון הקריאה");
-    setMode(isSeries ? 'series' : 'single');
+    // שורה 1: שם האירוע
+    document.getElementById('eventName').value = lines[0];
 
     // שורה 2: סוג ומרצה
     const line2 = lines[1];
     let eventType = line2;
     let speaker = "";
 
-    if (line2.includes(" עם ")) {
-        const parts = line2.split(" עם ");
-        eventType = parts[0].trim();
-        speaker = parts[1].trim();
-    } else if (line2.includes("עם ")) {
-        const parts = line2.split("עם ");
-        if(parts[0].trim() !== "") eventType = parts[0].trim();
-        speaker = parts[1].trim();
-    }
+    const splitWords = currentLang === 'en' ? [" with ", "by "] : [" עם ", "עם "];
+    let splitFound = false;
 
+    for (let word of splitWords) {
+        if (line2.toLowerCase().includes(word)) {
+            const parts = line2.split(new RegExp(word, "i"));
+            eventType = parts[0].trim();
+            speaker = parts[1].trim();
+            splitFound = true;
+            break;
+        }
+    }
+    
     document.getElementById('eventType').value = eventType;
     document.getElementById('speaker').value = speaker;
 
-    // שורה 3: זמן ומיקום
+    // שורה 3: זמן, תאריך ומיקום
     const line3 = lines[2];
     
-    const timeRegex = /(\d{1,2}:\d{2})/;
+    // חילוץ שעה (תואם לפורמטים 18:00 או 1:00 PM / 8:00 PM)
+    const timeRegex = /(\d{1,2}:\d{2})\s*(?:AM|PM|am|pm)?/;
     const foundTime = line3.match(timeRegex);
     if (foundTime) {
-        document.getElementById('eventTime').value = foundTime[1];
+        // אם זה באנגלית ויש PM/Israel time, נעדיף לקחת את השעה הישראלית אם קיימת
+        if (currentLang === 'en' && line3.includes("Israel time")) {
+            const israelTimeMatch = line3.match(/(\d{1,2}:\d{2})\s*(?:PM|AM)?\s*Israel/i);
+            document.getElementById('eventTime').value = israelTimeMatch ? israelTimeMatch[1] : foundTime[1];
+        } else {
+            document.getElementById('eventTime').value = foundTime[1];
+        }
     }
 
-    const dateRegex = /(\d{1,2}\.\d{1,2})/;
-    const foundDate = line3.match(dateRegex);
-    if (foundDate) {
-        const parts = foundDate[1].split('.');
-        const currentYear = new Date().getFullYear();
-        const formattedMonth = parts[1].padStart(2, '0');
-        const formattedDay = parts[0].padStart(2, '0');
-        document.getElementById('gregorianDate').value = `${currentYear}-${formattedMonth}-${formattedDay}`;
+    // חילוץ תאריך
+    if (currentLang === 'he') {
+        const dateRegex = /(\d{1,2}\.\d{1,2})/;
+        const foundDate = line3.match(dateRegex);
+        if (foundDate) {
+            const parts = foundDate[1].split('.');
+            const currentYear = new Date().getFullYear();
+            document.getElementById('gregorianDate').value = `${currentYear}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+    } else {
+        // אנגלית: חילוץ פורמט כמו Sunday, July 5, 2026
+        const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        let foundDateStr = "";
+        for (let m of months) {
+            if (line3.includes(m)) {
+                const regex = new RegExp(`${m}\\s+\\d{1,2},\\s*\\d{4}`, "i");
+                const match = line3.match(regex);
+                if (match) {
+                    foundDateStr = match[0];
+                    break;
+                }
+            }
+        }
+        if (foundDateStr) {
+            const d = new Date(foundDateStr);
+            if (!isNaN(d.getTime())) {
+                document.getElementById('gregorianDate').value = d.toISOString().split('T')[0];
+            }
+        }
     }
 
     // מיקום
@@ -170,86 +218,42 @@ function parseMailContent() {
         document.getElementById('location').value = ""; 
     } else {
         let locationCandidate = "";
-        if (line3.includes("בשעה")) {
-            const afterTime = line3.split(/בשעה \d{1,2}:\d{2}/);
-            if (afterTime.length > 1) locationCandidate = afterTime[1].replace(/[,ב]/g, "").trim();
-        }
-        if (!locationCandidate && line3.includes(",")) {
-            const commaParts = line3.split(",");
-            locationCandidate = commaParts[commaParts.length - 1].trim();
+        if (currentLang === 'he') {
+            if (line3.includes("בשעה")) {
+                const afterTime = line3.split(/בשעה \d{1,2}:\d{2}/);
+                if (afterTime.length > 1) locationCandidate = afterTime[1].replace(/[,ב]/g, "").trim();
+            }
+        } else {
+            if (line3.toLowerCase().includes("at ")) {
+                const parts = line3.split(/at /i);
+                locationCandidate = parts[parts.length - 1].trim();
+            }
         }
         document.getElementById('location').value = locationCandidate;
     }
 
     // תיאור ומחירים
     let descriptionLines = [];
-    let foundLectures = [];
-    let startCollectingLectures = false;
     let isFree = false;
     let price1 = "";
-    let price2 = "";
 
     for (let i = 3; i < lines.length; i++) {
         const line = lines[i];
-
-        if (line.includes("ההשתתפות בהרצאה חופשית") || line.includes("בהרשמה מראש") || line.includes("חופשית")) {
+        if (line.toLowerCase().includes("free") || line.includes("חופשית") || line.includes("חופשי")) {
             isFree = true;
         }
-
-        if (line.includes("מחיר") || line.includes("עלות") || line.includes("ש\"ח")) {
+        if (line.includes("מחיר") || line.includes("עלות") || line.includes("ש\"ח") || line.toLowerCase().includes("price") || line.toLowerCase().includes("nis")) {
             const numbers = line.match(/\d+/g);
-            if (numbers && numbers.length >= 2) {
-                price1 = numbers[0];
-                price2 = numbers[1];
-            } else if (numbers && numbers.length == 1) {
-                price1 = numbers[0];
-            }
+            if (numbers) price1 = numbers[0];
         }
-
-        if (line.includes("הרצאות הסדרה:") || line.includes("תכנית הסדרה:") || line.includes("המפגשים:")) {
-            startCollectingLectures = true;
-            continue;
-        }
-
-        if (startCollectingLectures) {
-            if (line.includes("מחיר") || line.includes("להרשמה") || line.includes("http")) {
-                startCollectingLectures = false;
-            } else {
-                foundLectures.push(line);
-            }
-        } else {
-            if (line.length > 12 && !line.includes("מחיר") && !line.includes("ש\"ח") && !line.includes("http")) {
-                descriptionLines.push(line);
-            }
+        if (line.length > 15 && !line.includes("http") && !line.toLowerCase().includes("price") && !line.includes("מחיר")) {
+            descriptionLines.push(line);
         }
     }
 
-    if (isFree) {
-        if (isSeries) {
-            document.getElementById('pricePerLecture').value = "0";
-            document.getElementById('pricePerSeries').value = "0";
-        } else {
-            document.getElementById('price').value = "0";
-        }
-    } else {
-        if (isSeries) {
-            document.getElementById('pricePerLecture').value = price1 || "30";
-            document.getElementById('pricePerSeries').value = price2 || "100";
-        } else {
-            document.getElementById('price').value = price1 || "";
-        }
-    }
-
+    document.getElementById('price').value = isFree ? "0" : (price1 || "");
     if (descriptionLines.length > 0) {
         document.getElementById('description').value = descriptionLines.join('\n\n');
-    }
-
-    if (isSeries && foundLectures.length > 0) {
-        const container = document.getElementById('lectures-container');
-        container.innerHTML = "";
-        foundLectures.forEach(lectureText => {
-            addLectureInput(lectureText);
-        });
     }
 
     saveDraft();
@@ -265,93 +269,135 @@ async function getHebrewDate(dateStr) {
         const [year, month, day] = dateStr.split('-');
         const response = await fetch(`https://www.hebcal.com/converter?cfg=json&gy=${year}&gm=${month}&gd=${day}&g2h=1`);
         const data = await response.json();
-        
         let hebParts = data.hebrew.split(' ');
         if (hebParts.length > 1) hebParts.pop();
-        
         let hebrewDate = hebParts.join(' ');
         hebrewDate = hebrewDate.replace(/[\u0591-\u05C7]/g, '').replace(/׳/g, "'");
         cachedHebrewDates[dateStr] = hebrewDate;
         return hebrewDate;
-    } catch (e) {
-        return "";
-    }
+    } catch (e) { return ""; }
 }
 
-// בניית גוף ההודעה הגנרי
+// בניית גוף ההודעה הגנרי (עברית ואנגלית)
 async function buildMessage() {
-    const eventName = document.getElementById('eventName').value || "[שם האירוע]";
-    const eventType = document.getElementById('eventType').value || "[סוג האירוע]";
+    const eventName = document.getElementById('eventName').value || (currentLang === 'he' ? "[שם האירוע]" : "[Event Name]");
+    const eventType = document.getElementById('eventType').value || (currentLang === 'he' ? "[סוג האירוע]" : "[Event Type]");
     const speakerVal = document.getElementById('speaker').value.trim();
     const description = document.getElementById('description').value;
     const dateVal = document.getElementById('gregorianDate').value;
     const timeVal = document.getElementById('eventTime').value || "--:--";
     const locationVal = document.getElementById('location').value.trim();
-    const regLink = document.getElementById('regLink').value || "[קישור]";
+    const regLink = document.getElementById('regLink').value || "[Link]";
 
-    let dayOfWeek = "[יום]";
-    let formattedCurrentDate = "[תאריך]";
+    let dayOfWeek = currentLang === 'he' ? "[יום]" : "[Day]";
+    let formattedDate = currentLang === 'he' ? "[תאריך]" : "[Date]";
     let hebrewDate = "";
 
     if (dateVal) {
         const dateObj = new Date(dateVal);
-        const daysOfWeek = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
-        dayOfWeek = daysOfWeek[dateObj.getDay()];
-        formattedCurrentDate = `${dateObj.getDate()}.${dateObj.getMonth() + 1}`;
-        hebrewDate = await getHebrewDate(dateVal);
+        if (currentLang === 'he') {
+            const days = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
+            dayOfWeek = days[dateObj.getDay()];
+            formattedDate = `${dateObj.getDate()}.${dateObj.getMonth() + 1}`;
+            hebrewDate = await getHebrewDate(dateVal);
+        } else {
+            const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+            const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            dayOfWeek = days[dateObj.getDay()];
+            formattedDate = `${months[dateObj.getMonth()]} ${dateObj.getDate()}, ${dateObj.getFullYear()}`;
+        }
     }
 
-    // כותרת מעוצבת כציטוט (עם > בתחילה) ושומרת על ההדגשה
+    // בניית כותרת מובנית כציטוט
     let boldHeader = `> *${eventName} | ${eventType}`;
     if (speakerVal) {
-        let speakerText = currentMode === 'series' && speakerVal.includes(',') 
-            ? speakerVal.split(',').map(s => s.trim()).filter(s => s).join(' & ') 
-            : speakerVal;
-        boldHeader += ` עם ${speakerText}`;
+        const connector = currentLang === 'he' ? " עם " : " with ";
+        boldHeader += `${connector}${speakerVal}`;
     }
     boldHeader += `*`;
 
     let message = `${boldHeader}\n\n`;
     if (description) message += `${description}\n\n`;
 
-    if (currentMode === 'single') {
-        const priceVal = document.getElementById('price').value.trim();
-        let locationLine = locationVal ? `• *מיקום:* ${locationVal}\n` : "";
-        let priceLine = (!priceVal || priceVal == "0") ? "• *עלות:* ההשתתפות בהרצאה חופשית, בהרשמה מראש." : `• *עלות:* ${priceVal}₪`;
+    if (currentLang === 'he') {
+        // מבנה עברית (קיים)
+        if (currentMode === 'single') {
+            const priceVal = document.getElementById('price').value.trim();
+            let locationLine = locationVal ? `• *מיקום:* ${locationVal}\n` : "";
+            let priceLine = (!priceVal || priceVal == "0") ? "• *עלות:* ההשתתפות בהרצאה חופשית, בהרשמה מראש." : `• *עלות:* ${priceVal}₪`;
 
-        message += `📅 *מתי ואיפה?*\n`;
-        message += `• *יום:* יום ${dayOfWeek}${hebrewDate ? ', ' + hebrewDate : ''}, ${formattedCurrentDate}\n`;
-        message += `• *שעה:* ${timeVal}\n`;
-        if (locationLine) message += locationLine;
-        message += `${priceLine}\n\n`;
+            message += `📅 *מתי ואיפה?*\n`;
+            message += `• *יום:* תאריך ${dayOfWeek}${hebrewDate ? ', ' + hebrewDate : ''}, ${formattedDate}\n`;
+            message += `• *שעה:* ${timeVal}\n`;
+            if (locationLine) message += locationLine;
+            message += `${priceLine}\n\n`;
+        } else {
+            // סדרת הרצאות בעברית...
+            const priceLecture = document.getElementById('pricePerLecture').value.trim();
+            const priceSeries = document.getElementById('pricePerSeries').value.trim();
+            let priceContent = (!priceLecture || priceLecture == "0") && (!priceSeries || priceSeries == "0")
+                ? "ההשתתפות חופשית, בהרשמה מראש."
+                : `${priceLecture} ש"ח להרצאה בודדת / ${priceSeries} ש"ח לכל הסדרה`;
+
+            message += `📖 *הרצאות הכלולות בסדרה:*\n`;
+            const lectureInputs = document.querySelectorAll('.lecture-item');
+            let hasLectures = false;
+            lectureInputs.forEach(input => {
+                const val = input.value.trim();
+                if (val) { message += `- ${val}\n`; hasLectures = true; }
+            });
+            if (!hasLectures) message += "- [רשימת הרצאות]\n";
+            message += `\n`;
+
+            message += `📅 *פרטי המפגשים:*\n`;
+            message += `• *תאריך תחילת האירוע:* יום ${dayOfWeek}${hebrewDate ? ', ' + hebrewDate : ''}, ${formattedDate}\n`;
+            message += `• *יום בשבוע:* ההרצאה תתרחש בכל יום ${dayOfWeek}\n`;
+            message += `• *שעה:* ${timeVal}\n`;
+            message += `• *מחיר:* ${priceContent}\n`;
+            if (locationVal) message += `• *מיקום:* ${locationVal}\n`;
+            message += `\n`;
+        }
+        message += `*לפרטים נוספים והרשמה👇*\n`;
     } else {
-        const priceLecture = document.getElementById('pricePerLecture').value.trim();
-        const priceSeries = document.getElementById('pricePerSeries').value.trim();
-        
-        let priceContent = (!priceLecture || priceLecture == "0") && (!priceSeries || priceSeries == "0")
-            ? "ההשתתפות חופשית, בהרשמה מראש."
-            : `${priceLecture} ש"ח להרצאה בודדת / ${priceSeries} ש"ח לכל הסדרה`;
+        // מבנה אנגלי חדש (LTR)
+        if (currentMode === 'single') {
+            const priceVal = document.getElementById('price').value.trim();
+            let locationLine = locationVal ? `• *Location:* ${locationVal}\n` : "";
+            let priceLine = (!priceVal || priceVal == "0") ? "• *Admission:* Free admission, registration required." : `• *Price:* ${priceVal} NIS`;
 
-        message += `📖 *הרצאות הכלולות בסדרה:*\n`;
-        const lectureInputs = document.querySelectorAll('.lecture-item');
-        let hasLectures = false;
-        lectureInputs.forEach(input => {
-            const val = input.value.trim();
-            if (val) { message += `- ${val}\n`; hasLectures = true; }
-        });
-        if (!hasLectures) message += "- [רשימת הרצאות]\n";
-        message += `\n`;
+            message += `📅 *When and Where?*\n`;
+            message += `• *Date:* ${dayOfWeek}, ${formattedDate}\n`;
+            message += `• *Time:* ${timeVal}\n`;
+            if (locationLine) message += locationLine;
+            message += `${priceLine}\n\n`;
+        } else {
+            const priceLecture = document.getElementById('pricePerLecture').value.trim();
+            const priceSeries = document.getElementById('pricePerSeries').value.trim();
+            let priceContent = (!priceLecture || priceLecture == "0") && (!priceSeries || priceSeries == "0")
+                ? "Free admission, registration required."
+                : `${priceLecture} NIS per lecture / ${priceSeries} NIS for the entire series`;
 
-        message += `📅 *פרטי המפגשים:*\n`;
-        message += `• *תאריך תחילת האירוע:* יום ${dayOfWeek}${hebrewDate ? ', ' + hebrewDate : ''}, ${formattedCurrentDate}\n`;
-        message += `• *יום בשבוע:* ההרצאה תתרחש בכל יום ${dayOfWeek}\n`;
-        message += `• *שעה:* ${timeVal}\n`;
-        message += `• *מחיר:* ${priceContent}\n`;
-        if (locationVal) message += `• *מיקום:* ${locationVal}\n`;
-        message += `\n`;
+            message += `📖 *Lectures in the Series:*\n`;
+            const lectureInputs = document.querySelectorAll('.lecture-item');
+            let hasLectures = false;
+            lectureInputs.forEach(input => {
+                const val = input.value.trim();
+                if (val) { message += `- ${val}\n`; hasLectures = true; }
+            });
+            if (!hasLectures) message += "- [List of lectures]\n";
+            message += `\n`;
+
+            message += `📅 *Event Details:*\n`;
+            message += `• *Start Date:* ${dayOfWeek}, ${formattedDate}\n`;
+            message += `• *Schedule:* Every ${dayOfWeek}\n`;
+            message += `• *Time:* ${timeVal}\n`;
+            message += `• *Price:* ${priceContent}\n`;
+            if (locationVal) message += `• *Location:* ${locationVal}\n`;
+            message += `\n`;
+        }
+        message += `*For details and registration👇*\n`;
     }
 
-    message += `*לפרטים נוספים והרשמה👇*\n`;
     message += `${regLink}`;
     return message;
 }
@@ -359,15 +405,29 @@ async function buildMessage() {
 // עדכון תצוגה מקדימה חיה
 async function updateLivePreview() {
     const previewContent = await buildMessage();
+    const previewDiv = document.getElementById('live-preview-content');
+    
+    // ניהול כיווניות של הקופסה בהתאם לשפה
+    if (currentLang === 'en') {
+        previewDiv.classList.add('preview-en');
+    } else {
+        previewDiv.classList.remove('preview-en');
+    }
+
+    // קביעת עיצוב הציטוט בהתאם לשפה (קו ימין לעברית, קו שמאל לאנגלית)
+    const borderSide = currentLang === 'en' ? 'border-left' : 'border-right';
+    const paddingSide = currentLang === 'en' ? 'padding-left' : 'padding-right';
+    const clearSide = currentLang === 'en' ? 'border-right: none; padding-right: 0;' : 'border-left: none; padding-left: 0;';
+
     let htmlPreview = previewContent
         .replace(/\*(.*?)\*/g, "<strong>$1</strong>")
-        // הפיכת ה-> לעיצוב ויזואלי של פס אפור ימני כמו ב-IMG_3379.jpg
-        .replace(/^>\s*(.*)$/gm, "<div style='border-right: 3.5px solid #8696a0; padding-right: 10px; margin: 6px 0; color: #e9edef; font-style: normal;'>$1</div>")
+        .replace(/^>\s*(.*)$/gm, `<div style='${borderSide}: 3.5px solid #8696a0; ${paddingSide}: 10px; ${clearSide} margin: 6px 0; color: #4a4a4a; font-style: normal;'>$1</div>`)
         .replace(/\n/g, "<br>");
-    document.getElementById('live-preview-content').innerHTML = htmlPreview;
+        
+    previewDiv.innerHTML = htmlPreview;
 }
 
-// שמירה והעתקה + הכנסה להיסטוריה
+// שמירה והעתקה
 async function generateAndCopy() {
     const msg = await buildMessage();
     navigator.clipboard.writeText(msg).then(() => {
@@ -376,21 +436,18 @@ async function generateAndCopy() {
     }).catch(() => { alert("שגיאה בהעתקה"); });
 }
 
-// פתיחה ישירה בוואטסאפ
-async function openWhatsAppDirect() {
-    const msg = await buildMessage();
-    saveToHistory(msg);
-    const encoded = encodeURIComponent(msg);
-    window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
+function openWhatsAppDirect() {
+    buildMessage().then(msg => {
+        saveToHistory(msg);
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+    });
 }
 
-// שמירת טיוטה (Draft) ב-localStorage
 function saveDraft() {
     const lectureItems = [];
     document.querySelectorAll('.lecture-item').forEach(i => lectureItems.push(i.value));
-
     const draft = {
-        currentMode,
+        currentMode, currentLang,
         eventName: document.getElementById('eventName').value,
         eventType: document.getElementById('eventType').value,
         speaker: document.getElementById('speaker').value,
@@ -431,17 +488,15 @@ function loadDraft() {
     }
     
     if (draft.currentMode) setMode(draft.currentMode);
+    if (draft.currentLang) setLanguage(draft.currentLang);
 }
 
-// ניהול היסטוריית הודעות
 function saveToHistory(messageText) {
     let history = JSON.parse(localStorage.getItem('whatsapp_history') || "[]");
     const title = document.getElementById('eventName').value || "אירוע ללא שם";
     const timeStamp = new Date().toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit'});
-    
     history.unshift({ title: `${title} (${timeStamp})`, text: messageText });
     if (history.length > 5) history.pop();
-    
     localStorage.setItem('whatsapp_history', JSON.stringify(history));
     updateHistoryList();
 }
@@ -450,15 +505,9 @@ function updateHistoryList() {
     const history = JSON.parse(localStorage.getItem('whatsapp_history') || "[]");
     const container = document.getElementById('history-list');
     const section = document.getElementById('history-section');
-    
-    if (history.length === 0) {
-        section.style.display = 'none';
-        return;
-    }
-    
+    if (history.length === 0) { section.style.display = 'none'; return; }
     section.style.display = 'block';
     container.innerHTML = "";
-    
     history.forEach((item) => {
         const div = document.createElement('div');
         div.className = 'history-item';
@@ -471,7 +520,52 @@ function updateHistoryList() {
     });
 }
 
-// האזנה לשינויים לשמירה אוטומטית
+
+// פונקציה לניקוי כל השדות והטיוטה
+function clearAllFields() {
+    if (!confirm("האם אתה בטוח שברצונך למחוק את כל הנתונים בטופס?")) {
+        return; // ביטול הפעולה אם המשתמש התחרט
+    }
+
+    // רשימת כל השדות הפשוטים לניקוי
+    const fields = [
+        'rawMailInput', 'eventName', 'eventType', 'speaker', 
+        'description', 'location', 'price', 
+        'pricePerLecture', 'pricePerSeries', 'regLink'
+    ];
+    
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+    });
+
+    // איפוס התאריך להיום
+    const dateInput = document.getElementById('gregorianDate');
+    if (dateInput) {
+        dateInput.valueAsDate = new Date();
+    }
+
+    // איפוס השעה לברירת מחדל ריקה
+    const timeInput = document.getElementById('eventTime');
+    if (timeInput) timeInput.value = "";
+
+    // אם אנחנו במצב סדרה, ננקה את רשימת ההרצאות ונחזיר 2 שדות ריקים
+    const container = document.getElementById('lectures-container');
+    if (container) {
+        container.innerHTML = "";
+        if (currentMode === 'series') {
+            addLectureInput();
+            addLectureInput();
+        }
+    }
+
+    // מחיקת הטיוטה מהזיכרון המקומי
+    localStorage.removeItem('whatsapp_preset_draft');
+
+    // עדכון מיידי של התצוגה המקדימה החיה
+    updateLivePreview();
+}
+
 window.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('input, textarea').forEach(el => {
         if(el.id !== 'rawMailInput' && el.id !== 'password-input') {

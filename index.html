@@ -24,6 +24,11 @@
     <!-- האתר הראשי -->
     <div class="container">
         <h1>יוצר תזכורות</h1>
+        
+        <div class="toggle-container" style="margin-bottom: 12px;">
+            <button type="button" id="btn-lang-he" class="toggle-btn active" onclick="setLanguage('he')">עברית (Hebrew)</button>
+            <button type="button" id="btn-lang-en" class="toggle-btn" onclick="setLanguage('en')">אנגלית (English)</button>
+        </div>
 
         <!-- תיבת קסם לחילוץ אוטומטי מהמייל -->
         <div class="ai-parser-box">
@@ -128,6 +133,7 @@
         <div class="action-buttons">
             <button onclick="generateAndCopy()">📋 העתק נוסח לוואטסאפ</button>
             <button class="btn-whatsapp-direct" onclick="openWhatsAppDirect()">🚀 פתח ושלח ישירות</button>
+            <button class="btn-clear" onclick="clearAllFields()">🗑️ נקה הכל</button>
         </div>
 
         <!-- היסטוריית תזכורות שהוכנו -->

@@ -293,3 +293,21 @@ button:active {
     margin-top: 10px;
     display: none;
 }
+
+.preview-en {
+    direction: ltr !important;
+    text-align: left !important;
+}
+
+/* עיצוב כפתור נקה */
+.action-buttons .btn-clear {
+    background: #ff9500;
+}
+
+.action-buttons .btn-clear:hover {
+    background: #e08400;
+}
+
+.action-buttons .btn-clear:active {
+    background: #c77500;
+}
