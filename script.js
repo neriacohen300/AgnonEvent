@@ -293,10 +293,24 @@ async function buildMessage() {
     const locationVal = document.getElementById('location').value.trim();
     const regLink = document.getElementById('regLink').value || "[Link]";
 
+    // פונקציית עזר להמרת שעה לפורמט AM/PM באנגלית
+    function formatTimeEnglish(timeStr) {
+        if (!timeStr || timeStr === "--:--" || !timeStr.includes(':')) return "--:--";
+        const parts = timeStr.split(':');
+        let hours = parseInt(parts[0], 10);
+        let minutes = parts[1];
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12; // הפיכת 0 ל-12 עבור חצות
+        
+        // אם הדקות הן 00, נציג למשל 6 PM, אחרת נציג 6:30 PM
+        return minutes === '00' ? `${hours} ${ampm}` : `${hours}:${minutes} ${ampm}`;
+    }
+
     let dayOfWeek = currentLang === 'he' ? "[יום]" : "[Day]";
     let formattedDate = currentLang === 'he' ? "[תאריך]" : "[Date]";
     let hebrewDate = "";
-    let isTomorrow = false; // משתנה חדש שנוסיף
+    let isTomorrow = false; 
 
     if (dateVal) {
         const dateObj = new Date(dateVal);
@@ -335,30 +349,36 @@ async function buildMessage() {
 
     let message = `${boldHeader}\n`;
     
-    // --- התוספת החדשה: אם ההרצאה מחר, מוסיפים התראה ---
     if (isTomorrow) {
         message += currentLang === 'he' 
             ? `*מחר!!!*\n\n`
             : `*Tomorrow!!!*\n\n`;
     }
-    // --------------------------------------------------
 
     if (description) message += `${description}\n\n`;
 
+    // בדיקה אם מדובר באירוע בזום (ריק, או מכיל מילות מפתח)
+    const isZoom = !locationVal || locationVal.toLowerCase().includes('zoom') || locationVal.includes('זום') || locationVal.includes('מקוון');
+
     if (currentLang === 'he') {
-        // מבנה עברית (קיים)
+        // מבנה עברית
         if (currentMode === 'single') {
             const priceVal = document.getElementById('price').value.trim();
-            let locationLine = locationVal ? `• *מיקום:* ${locationVal}\n` : "";
             let priceLine = (!priceVal || priceVal == "0") ? "• *עלות:* ההשתתפות בהרצאה חופשית, בהרשמה מראש." : `• *עלות:* ${priceVal}₪`;
 
             message += `📅 *מתי ואיפה?*\n`;
             message += `• *תאריך:* יום ${dayOfWeek}${hebrewDate ? ', ' + hebrewDate : ''}, ${formattedDate}\n`;
             message += `• *שעה:* ${timeVal}\n`;
-            if (locationLine) message += locationLine;
+            
+            if (isZoom) {
+                message += `• *מיקום:* בזום\n`;
+            } else {
+                message += `• *מיקום:* ${locationVal}\n`;
+            }
+            
             message += `${priceLine}\n\n`;
         } else {
-            // סדרת הרצאות בעברית...
+            // סדרת הרצאות בעברית
             const priceLecture = document.getElementById('pricePerLecture').value.trim();
             const priceSeries = document.getElementById('pricePerSeries').value.trim();
             let priceContent = (!priceLecture || priceLecture == "0") && (!priceSeries || priceSeries == "0")
@@ -379,24 +399,38 @@ async function buildMessage() {
             message += `• *תאריך תחילת האירוע:* ${dayOfWeek}${hebrewDate ? ', ' + hebrewDate : ''}, ${formattedDate}\n`;
             message += `• *יום בשבוע:* ההרצאה תתרחש בכל יום ${dayOfWeek}\n`;
             message += `• *שעה:* ${timeVal}\n`;
+            
+            if (isZoom) {
+                message += `• *מיקום:* בזום\n`;
+            } else {
+                message += `• *מיקום:* ${locationVal}\n`;
+            }
+            
             message += `• *עלות:* ${priceContent}\n`;
-            if (locationVal) message += `• *מיקום:* ${locationVal}\n`;
             message += `\n`;
         }
         message += `*לפרטים נוספים והרשמה👇*\n`;
     } else {
-        // מבנה אנגלי חדש (LTR)
+        // מבנה אנגלי (LTR)
+        const englishTime = formatTimeEnglish(timeVal);
+
         if (currentMode === 'single') {
             const priceVal = document.getElementById('price').value.trim();
-            let locationLine = locationVal ? `• *Location:* ${locationVal}\n` : "";
             let priceLine = (!priceVal || priceVal == "0") ? "• *Admission:* Free admission, registration required." : `• *Price:* ${priceVal} NIS`;
 
             message += `📅 *When and Where?*\n`;
             message += `• *Date:* ${dayOfWeek}, ${formattedDate}\n`;
-            message += `• *Time:* ${timeVal}\n`;
-            if (locationLine) message += locationLine;
+            message += `• *Time:* ${englishTime}\n`; // שימוש בשעה המומרת
+            
+            if (isZoom) {
+                message += `• *Where:* Online via Zoom\n`;
+            } else {
+                message += `• *Location:* ${locationVal}\n`;
+            }
+            
             message += `${priceLine}\n\n`;
         } else {
+            // סדרת הרצאות באנגלית
             const priceLecture = document.getElementById('pricePerLecture').value.trim();
             const priceSeries = document.getElementById('pricePerSeries').value.trim();
             let priceContent = (!priceLecture || priceLecture == "0") && (!priceSeries || priceSeries == "0")
@@ -416,12 +450,18 @@ async function buildMessage() {
             message += `📅 *Event Details:*\n`;
             message += `• *Start Date:* ${dayOfWeek}, ${formattedDate}\n`;
             message += `• *Schedule:* Every ${dayOfWeek}\n`;
-            message += `• *Time:* ${timeVal}\n`;
+            message += `• *Time:* ${englishTime}\n`; // שימוש בשעה המומרת
+            
+            if (isZoom) {
+                message += `• *Where:* Online via Zoom\n`;
+            } else {
+                message += `• *Location:* ${locationVal}\n`;
+            }
+            
             message += `• *Price:* ${priceContent}\n`;
-            if (locationVal) message += `• *Location:* ${locationVal}\n`;
             message += `\n`;
         }
-        message += `*For details and registration👇*\n`;
+        message += `For more details and registration👇\n`;
     }
 
     message += `${regLink}`;
