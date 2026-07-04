@@ -377,7 +377,7 @@ async function buildMessage() {
     if (speakerVal) boldHeader += (currentLang === 'he' ? " עם " : " with ") + speakerVal;
     boldHeader += `*`;
 
-    let message = `${boldHeader}\n`;
+    let message = `${boldHeader}\n\n`;
     if (isTomorrow) message += currentLang === 'he' ? `*מחר!!!*\n\n` : `*Tomorrow!!!*\n\n`;
     if (description) message += `${description}\n\n`;
 
