@@ -399,7 +399,7 @@ async function buildMessage() {
                 if (val) { message += `- ${val}\n`; hasLectures = true; }
             });
             if (!hasLectures) message += "- [רשימת הרצאות]\n";
-            message += `\n📅 *פרטי המפגשים:*\n• *תאריך תחילת האירוע:* ${dayOfWeek}${hebrewDate ? ', ' + hebrewDate : ''}, ${formattedDate}\n• *יום בשבוע:* בכל יום ${dayOfWeek}\n• *שעה:* ${timeVal}\n• *מיקום:* ${isZoom ? 'בזום' : locationVal}\n• *עלות:* ${priceContent}\n\n`;
+            message += `\n📅 *פרטי המפגשים:*\n• *תאריך תחילת האירוע:* יום ${dayOfWeek}${hebrewDate ? ', ' + hebrewDate : ''}, ${formattedDate}\n• *יום בשבוע:* בכל יום ${dayOfWeek}\n• *שעה:* ${timeVal}\n• *מיקום:* ${isZoom ? 'בזום' : locationVal}\n• *עלות:* ${priceContent}\n\n`;
         }
         message += `*לפרטים נוספים והרשמה👇*\n`;
     } else {
