@@ -428,6 +428,30 @@ async function buildMessage() {
 }
 
 async function updateLivePreview() {
+    // === מערכת רמזור תווים לתיאור ===
+    const descEl = document.getElementById('description');
+    const counterEl = document.getElementById('char-counter');
+    
+    if (descEl && counterEl) {
+        const len = descEl.value.length;
+        let color = '#ffd60a'; // צהוב (iOS Dark Yellow)
+        let statusLabel = 'צהוב';
+
+        if (len > 100 && len <= 300) {
+            color = '#30d158'; // ירוק (iOS Dark Green)
+            statusLabel = 'ירוק';
+        } else if (len > 300 && len <= 400) {
+            color = '#ff9f0a'; // כתום (iOS Dark Orange)
+            statusLabel = 'כתום';
+        } else if (len > 400) {
+            color = '#ff453a'; // אדום (iOS Dark Red)
+            statusLabel = 'אדום';
+        }
+
+        counterEl.innerText = `${len} תווים (${statusLabel})`;
+        counterEl.style.color = color;
+    }
+    // ==================================
     const previewContent = await buildMessage();
     const previewDiv = document.getElementById('live-preview-content');
     
