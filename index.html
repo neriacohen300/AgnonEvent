@@ -2,14 +2,13 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>יוצר תזכורות וואטסאפ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>יוצר תזכורות וואטסאפ - iOS Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- מסך סיסמה -->
     <div id="lock-screen">
         <div class="box">
             <h2>כניסה למערכת</h2>
@@ -21,23 +20,20 @@
         </div>
     </div>
 
-    <!-- האתר הראשי -->
     <div class="container">
         <h1>יוצר תזכורות</h1>
         
         <div class="toggle-container" style="margin-bottom: 12px;">
-            <button type="button" id="btn-lang-he" class="toggle-btn active" onclick="setLanguage('he')">עברית (Hebrew)</button>
-            <button type="button" id="btn-lang-en" class="toggle-btn" onclick="setLanguage('en')">אנגלית (English)</button>
+            <button type="button" id="btn-lang-he" class="toggle-btn active" onclick="setLanguage('he')">עברית</button>
+            <button type="button" id="btn-lang-en" class="toggle-btn" onclick="setLanguage('en')">English</button>
         </div>
 
-        <!-- תיבת קסם לחילוץ אוטומטי מהמייל -->
         <div class="ai-parser-box">
             <h3>🪄 מילוי אוטומטי מהמייל</h3>
-            <textarea id="rawMailInput" rows="4" placeholder="הדבק כאן את הטקסט מהמייל..."></textarea>
+            <textarea id="rawMailInput" rows="2" placeholder="הדבק כאן את הטקסט מהמייל..." class="auto-expand"></textarea>
             <button type="button" class="btn-magic" onclick="parseMailContent()">חלץ פרטים ומלא טופס ✨</button>
         </div>
 
-        <!-- בורר המצבים -->
         <div class="toggle-container">
             <button type="button" id="btn-single" class="toggle-btn active" onclick="setMode('single')">הרצאה בודדת</button>
             <button type="button" id="btn-series" class="toggle-btn" onclick="setMode('series')">סדרת הרצאות</button>
@@ -52,7 +48,6 @@
             <div class="form-group">
                 <label id="lbl-eventType">סוג ההרצאה</label>
                 <input type="text" id="eventType" placeholder="למשל: הרצאת העשרה" oninput="updateLivePreview()">
-                <!-- כפתורי קיצור לסוגי אירועים -->
                 <div class="quick-tags">
                     <span class="tag" onclick="quickFill('eventType', 'סדרת הרצאות מקוונות')">סדרת מקוונות</span>
                     <span class="tag" onclick="quickFill('eventType', 'סדרת הרצאות מקוונות חדשה')">מקוונות חדשה</span>
@@ -69,10 +64,9 @@
 
         <div class="form-group">
             <label id="lbl-description">תיאור קצר (ניתן להשתמש ב-*להדגשה*)</label>
-            <textarea id="description" rows="3" placeholder="הסבר קצר..." oninput="updateLivePreview()"></textarea>
+            <textarea id="description" rows="2" placeholder="הסבר קצר..." oninput="updateLivePreview()" class="auto-expand"></textarea>
         </div>
 
-        <!-- רשימת הרצאות דינמית לסדרה -->
         <div id="series-lectures-group" class="form-group" style="display: none;">
             <label>הרצאות הכלולות בסדרה</label>
             <div id="lectures-container"></div>
@@ -93,21 +87,18 @@
         <div class="form-group">
             <label>מיקום (אופציונלי)</label>
             <input type="text" id="location" placeholder="השאר ריק אם זה בזום" oninput="updateLivePreview()">
-            <!-- כפתורי קיצור למיקומים קבועים -->
             <div class="quick-tags">
                 <span class="tag" onclick="quickFill('location', 'בית עגנון, קלוזנר 16, ירושלים')">בית עגנון</span>
-                <span class="tag" onclick="quickFill('location', 'בית הכנסת ידידיה, ירושלים')">ביכנ\"ס ידידיה</span>
+                <span class="tag" onclick="quickFill('location', 'בית הכנסת ידידיה, ירושלים')">ביכנ"ס ידידיה</span>
                 <span class="tag" onclick="quickFill('location', '')">בזום / מקוון (נקה)</span>
             </div>
         </div>
 
-        <!-- שדה מחיר להרצאה בודדת -->
         <div id="single-price-group" class="form-group">
             <label>מחיר בש"ח (אופציונלי / השאר ריק לחינם)</label>
             <input type="number" id="price" placeholder="מחיר במספר" oninput="updateLivePreview()">
         </div>
 
-        <!-- שדות מחיר מפוצלים לסדרה -->
         <div id="series-prices-group" class="row" style="display: none; margin-bottom: 18px;">
             <div class="form-group" style="margin-bottom: 0;">
                 <label>מחיר להרצאה בודדת</label>
@@ -124,22 +115,21 @@
             <input type="url" id="regLink" placeholder="https://..." oninput="updateLivePreview()">
         </div>
 
-        <!-- תצוגה מקדימה חיה (Live Preview) -->
         <div class="preview-box">
             <h4>📱 תצוגה מקדימה חיה (וואטסאפ)</h4>
             <div id="live-preview-content"></div>
         </div>
 
         <div class="action-buttons">
-            <button onclick="generateAndCopy()">📋 העתק נוסח לוואטסאפ</button>
-            <button class="btn-whatsapp-direct" onclick="openWhatsAppDirect()">🚀 פתח ושלח ישירות</button>
-            <button class="btn-clear" onclick="clearAllFields()">🗑️ נקה הכל</button>
-            <button id="btn-save-lecture" style="background: var(--accent);" onclick="saveCurrentLectureToList()">💾 שמור הרצאה למאגר</button>
+            <button onclick="generateAndCopy()">📋 העתק נוסח</button>
+            <button class="btn-whatsapp-direct" onclick="openWhatsAppDirect()">🚀 שלח ישירות</button>
+            <button class="btn-calendar" onclick="downloadCalendarFile()">📅 הוסף תזכורת ליומן</button>
+            <button id="btn-save-lecture" class="btn-save" onclick="saveCurrentLectureToList()">💾 שמור בענן</button>
+            <button class="btn-clear" onclick="clearAllFields()" style="grid-column: span 2;">🗑️ נקה הכל</button>
         </div>
 
-        <!-- היסטוריית תזכורות שהוכנו -->
         <div class="history-box" id="history-section" style="display: none;">
-            <h4>📂 מאגר הרצאות שמורות</h4>
+            <h4>📂 מאגר הרצאות שמורות (מסונכרן לענן)</h4>
             <div id="history-list"></div>
         </div>
     </div>

@@ -1,15 +1,18 @@
 :root {
-    --primary: #25D366;
-    --primary-dark: #128C7E;
-    --bg: #f0f2f5;
-    --card-bg: #ffffff;
-    --text: #333333;
-    --accent: #6c5ce7;
+    --primary: #00a884;     /* ירוק וואטסאפ מודרני */
+    --primary-dark: #005c4b;
+    --bg: #0b141a;          /* רקע כללי כהה אייפון וואטסאפ */
+    --card-bg: #111b21;     /* רקע בועה/כרטיס */
+    --text: #e9edef;        /* טקסט בהיר */
+    --text-muted: #8696a0;
+    --accent: #007aff;      /* כחול iOS למערכת היומן והעריכה */
+    --input-bg: #202c33;    /* רקע תיבות קלט */
+    --border-color: #2a3942;
 }
 
 * {
     box-sizing: border-box;
-    font-family: 'Rubik', -apple-system, sans-serif;
+    font-family: 'Rubik', -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-tap-highlight-color: transparent;
 }
 
@@ -18,6 +21,8 @@ body {
     color: var(--text);
     margin: 0;
     padding: 20px;
+    padding-top: calc(20px + env(safe-area-inset-top));
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
     display: flex;
     justify-content: center;
     align-items: center;
@@ -28,30 +33,31 @@ body {
     width: 100%;
     max-width: 500px;
     background: var(--card-bg);
-    padding: 25px;
-    border-radius: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
 
 h1 {
-    font-size: 24px;
+    font-size: 22px;
     text-align: center;
     margin-bottom: 20px;
-    color: var(--primary-dark);
+    color: var(--text);
+    font-weight: 700;
 }
 
 .ai-parser-box {
-    background: #f8f9fa;
-    border: 2px dashed #cbd5e1;
-    border-radius: 14px;
-    padding: 15px;
-    margin-bottom: 25px;
+    background: #182229;
+    border: 1.5px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 20px;
 }
 
 .ai-parser-box h3 {
-    margin: 0 0 10px 0;
-    font-size: 15px;
-    color: #475569;
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: var(--text-muted);
     display: flex;
     align-items: center;
     gap: 5px;
@@ -59,70 +65,74 @@ h1 {
 
 .btn-magic {
     width: 100%;
-    background: var(--accent);
+    background: var(--primary-dark);
     color: white;
-    padding: 10px;
+    padding: 12px;
     font-size: 14px;
     border-radius: 10px;
     margin-top: 8px;
     font-weight: bold;
     border: none;
     cursor: pointer;
+    min-height: 44px;
 }
 
 .toggle-container {
     display: flex;
-    background: #e3e5e8;
-    padding: 4px;
-    border-radius: 12px;
-    margin-bottom: 25px;
+    background: #202c33;
+    padding: 3px;
+    border-radius: 10px;
+    margin-bottom: 20px;
 }
 
 .toggle-btn {
     flex: 1;
     background: transparent;
-    color: #555;
+    color: var(--text-muted);
     border: none;
     padding: 10px;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: bold;
-    border-radius: 9px;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
-    margin-top: 0 !important;
+    min-height: 38px;
 }
 
 .toggle-btn.active {
-    background: white;
-    color: var(--primary-dark);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    background: #374248;
+    color: white;
 }
 
 .form-group {
-    margin-bottom: 18px;
+    margin-bottom: 16px;
 }
 
 label {
     display: block;
     font-weight: 500;
     margin-bottom: 6px;
-    font-size: 14px;
+    font-size: 13px;
+    color: var(--text-muted);
 }
 
 input, textarea, select {
     width: 100%;
     padding: 12px;
-    border: 1px solid #ccc;
-    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
     font-size: 16px;
-    background: #fafafa;
-    transition: all 0.2s;
+    background: var(--input-bg);
+    color: var(--text);
+    transition: border-color 0.2s;
+    resize: none; /* ביטול הרחבה ידנית מכוערת באייפון */
+    overflow-y: hidden; /* מניעת גלילה פנימית בתיבות דינמיות */
 }
 
 input:focus, textarea:focus {
     border-color: var(--primary);
-    background: #fff;
     outline: none;
+    background: #2a3942;
 }
 
 .row {
@@ -131,7 +141,6 @@ input:focus, textarea:focus {
     gap: 12px;
 }
 
-/* תגיות בחירה מהירה */
 .quick-tags {
     display: flex;
     flex-wrap: wrap;
@@ -140,43 +149,46 @@ input:focus, textarea:focus {
 }
 
 .tag {
-    background: #e2e8f0;
-    color: #475569;
-    font-size: 12px;
-    padding: 4px 10px;
-    border-radius: 20px;
+    background: #202c33;
+    color: #aebac1;
+    font-size: 11px;
+    padding: 6px 10px;
+    border-radius: 15px;
     cursor: pointer;
-    transition: background 0.2s;
+    border: 0.5px solid var(--border-color);
 }
 
 .tag:hover {
-    background: #cbd5e1;
-    color: #1e293b;
+    background: #2a3942;
+    color: white;
 }
 
-/* קופסת תצוגה מקדימה */
+/* בועת תצוגה מקדימה בסגנון WhatsApp Dark Mode */
 .preview-box {
-    background: #e5ddd5; /* צבע רקע וואטסאפ קלאסי */
-    border-radius: 14px;
-    padding: 15px;
-    margin-top: 25px;
-    border: 1px solid #ced4da;
+    background: #0b141a; 
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 20px;
+    border: 1px solid var(--border-color);
+    background-image: radial-gradient(#1c2c35 10%, transparent 10%); /* דפוס נקודות קל של וואטסאפ */
+    background-size: 16px 16px;
 }
 
 .preview-box h4 {
-    margin: 0 0 10px 0;
-    font-size: 14px;
-    color: #4a4a4a;
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    color: var(--text-muted);
 }
 
 #live-preview-content {
-    background: #ffffff;
+    background: #1f2c34; /* צבע בועה חשוכה */
+    color: #e9edef;
     padding: 12px;
     border-radius: 8px;
     font-size: 14px;
-    white-space: pre-wrap; /* שומר על ירידות שורה */
+    white-space: pre-wrap;
     line-height: 1.4;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.5);
     max-height: 250px;
     overflow-y: auto;
 }
@@ -190,33 +202,48 @@ input:focus, textarea:focus {
 
 button {
     width: 100%;
-    padding: 14px;
+    padding: 12px;
     background: var(--primary);
     color: white;
     border: none;
-    border-radius: 12px;
-    font-size: 15px;
+    border-radius: 10px;
+    font-size: 14px;
     font-weight: bold;
     cursor: pointer;
-    transition: background 0.2s;
-}
-
-.btn-whatsapp-direct {
-    background: var(--primary-dark);
+    min-height: 44px; /* גודל לחיצה אופטימלי לאייפון */
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 button:active {
-    opacity: 0.9;
+    opacity: 0.8;
+}
+
+.btn-whatsapp-direct {
+    background: #008069;
+}
+
+.btn-calendar {
+    background: var(--accent);
+}
+
+.btn-save {
+    background: #5856d6;
+}
+
+.btn-clear {
+    background: #ff453a;
 }
 
 .btn-secondary {
-    background: #007aff;
-    padding: 8px 12px;
-    font-size: 13px;
-    border-radius: 10px;
+    background: var(--accent);
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 8px;
     width: auto;
     display: inline-block;
-    margin-bottom: 10px;
+    min-height: 32px;
     margin-top: 5px;
 }
 
@@ -227,43 +254,42 @@ button:active {
 }
 
 .lecture-input-row button {
-    width: 45px;
-    height: 45px;
-    background: #ff3b30;
-    border-radius: 12px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    width: 44px;
+    height: 44px;
+    background: #ff453a;
+    border-radius: 10px;
     padding: 0;
+    min-width: 44px;
 }
 
-/* היסטוריה */
+/* היסטוריה ענן */
 .history-box {
     margin-top: 25px;
-    border-top: 1px solid #cbd5e1;
+    border-top: 1px solid var(--border-color);
     padding-top: 15px;
 }
 
 .history-box h4 {
     margin: 0 0 10px 0;
-    font-size: 14px;
-    color: #64748b;
+    font-size: 13px;
+    color: var(--text-muted);
 }
 
 .history-item {
-    background: #f1f5f9;
-    padding: 10px;
-    border-radius: 8px;
+    background: #111b21;
+    border: 1px solid var(--border-color);
+    padding: 12px;
+    border-radius: 10px;
     font-size: 13px;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     cursor: pointer;
-    transition: background 0.2s;
     display: flex;
     justify-content: space-between;
+    align-items: center;
 }
 
 .history-item:hover {
-    background: #e2e8f0;
+    background: #1f2c34;
 }
 
 /* מסך נעילה */
@@ -278,18 +304,18 @@ button:active {
 }
 
 #lock-screen .box {
-    background: white;
-    padding: 30px;
-    border-radius: 20px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    padding: 25px;
+    border-radius: 16px;
     text-align: center;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
     width: 100%;
-    max-width: 350px;
+    max-width: 320px;
 }
 
 .error-msg {
-    color: #d32f2f;
-    font-size: 14px;
+    color: #ff453a;
+    font-size: 13px;
     margin-top: 10px;
     display: none;
 }
@@ -297,17 +323,4 @@ button:active {
 .preview-en {
     direction: ltr !important;
     text-align: left !important;
-}
-
-/* עיצוב כפתור נקה */
-.action-buttons .btn-clear {
-    background: #ff9500;
-}
-
-.action-buttons .btn-clear:hover {
-    background: #e08400;
-}
-
-.action-buttons .btn-clear:active {
-    background: #c77500;
 }
