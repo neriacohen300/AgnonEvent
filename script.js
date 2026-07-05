@@ -444,6 +444,7 @@ async function buildMessage() {
     return message;
 }
 
+
 async function updateLivePreview() {
     // === מערכת רמזור תווים לתיאור ===
     const descEl = document.getElementById('description');
