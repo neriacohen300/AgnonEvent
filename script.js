@@ -373,9 +373,26 @@ async function buildMessage() {
         }
     }
 
+    // --- עיבוד פורמט רשימת המרצים עם פסיקים ו-ו' החיבור ---
     let boldHeader = `> *${eventName} | ${eventType}`;
-    if (speakerVal) boldHeader += (currentLang === 'he' ? " עם " : " with ") + speakerVal;
+    if (speakerVal) {
+        const speakersArray = speakerVal.split(',').map(s => s.trim()).filter(s => s.length > 0);
+        let formattedSpeakers = "";
+        
+        if (speakersArray.length > 1) {
+            const lastSpeaker = speakersArray.pop();
+            const conjunction = currentLang === 'he' ? ' ו' : ' and ';
+            formattedSpeakers = speakersArray.join(', ') + conjunction + lastSpeaker;
+        } else if (speakersArray.length === 1) {
+            formattedSpeakers = speakersArray[0];
+        }
+        
+        if (formattedSpeakers) {
+            boldHeader += (currentLang === 'he' ? " עם " : " with ") + formattedSpeakers;
+        }
+    }
     boldHeader += `*`;
+    // --------------------------------------------------
 
     let message = `${boldHeader}\n\n`;
     if (isTomorrow) message += currentLang === 'he' ? `*מחר!!!*\n\n` : `*Tomorrow!!!*\n\n`;
