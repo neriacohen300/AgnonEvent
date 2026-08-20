@@ -440,10 +440,23 @@ async function buildMessage() {
         }
         message += `For more details and registration👇\n`;
     }
-    message += `${regLink}`;
+    message += `${regLink}\n\n`;
+
+    message += "----\n\n"
+
+    if (currentLang === 'he') {
+         message += `*💡 מעדיפים לצפות בזמן שלכם??*\n`
+         message += `מאגר ההרצאות והסדרות המוקלטות של בית עגנון זמין עבורכם לצפייה ישירה עבור תשלום סמלי:\n`
+         message += `https://agnonhouse.org.il/video`
+    } else {
+        message += `*💡 Prefer to watch on your own time?*\n`
+        message += `Discover our digital archive of recorded lectures and series available for on-demand viewing on the Agnon House website for a nominal fee:\n`
+        message += `https://agnonhouse.org.il/video`
+        }
+
+
     return message;
 }
-
 
 async function updateLivePreview() {
     // === מערכת רמזור תווים לתיאור ===
